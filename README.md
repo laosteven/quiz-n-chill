@@ -36,12 +36,18 @@ Access at: http://localhost:3000
 npm install
 ```
 
-2. **Run development server**
+2. **Configure environment (optional)**
+```bash
+cp .env.example .env
+# Edit .env to set PORT, CORS_ORIGIN, etc.
+```
+
+3. **Run development server**
 ```bash
 npm run dev
 ```
 
-3. **Build for production**
+4. **Build for production**
 ```bash
 npm run build
 npm run preview
@@ -150,6 +156,14 @@ quiz-n-chill/
 1. Create a new YAML file in the `games/` directory
 2. Follow the configuration schema
 3. The game will automatically appear in the home page dropdown
+
+### Environment Variables
+
+Create a `.env` file based on `.env.example`:
+
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment mode (development/production)
+- `CORS_ORIGIN` - Allowed CORS origins. Set to `*` for development or specify your domain(s) for production (e.g., `https://yourdomain.com`)
 
 ## Deployment 🚀
 

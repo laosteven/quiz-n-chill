@@ -5,7 +5,7 @@ import { gameManager } from './game-manager';
 export function setupSocketIO(httpServer: HTTPServer) {
 	const io = new Server(httpServer, {
 		cors: {
-			origin: '*',
+			origin: process.env.CORS_ORIGIN || '*',
 			methods: ['GET', 'POST']
 		}
 	});
