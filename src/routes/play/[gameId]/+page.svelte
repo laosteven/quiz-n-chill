@@ -90,16 +90,12 @@
 		}
 	}
 
-	function getPlayerScore(): number {
-		if (!game || !player) return 0;
-		return game.players[player.id]?.score || 0;
-	}
-
-	function getPlayerRank(): number {
+	let playerScore = $derived(game && player ? game.players[player.id]?.score || 0 : 0);
+	let playerRank = $derived.by(() => {
 		if (!game || !player) return 0;
 		const scores = Object.values(game.players).map(p => p.score).sort((a, b) => b - a);
-		return scores.indexOf(getPlayerScore()) + 1;
-	}
+		return scores.indexOf(playerScore) + 1;
+	});
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-pink-500 to-purple-600 p-4">
@@ -138,7 +134,7 @@
 				<div class="mb-4 text-center">
 					<span class="text-sm text-gray-600">Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span>
 					<div class="mt-2">
-						<span class="text-sm font-semibold text-purple-600">Your Score: {getPlayerScore()}</span>
+						<span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
 					</div>
 				</div>
 
@@ -159,7 +155,7 @@
 				<div class="mb-4 text-center">
 					<span class="text-sm text-gray-600">Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span>
 					<div class="mt-2">
-						<span class="text-sm font-semibold text-purple-600">Your Score: {getPlayerScore()}</span>
+						<span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
 					</div>
 				</div>
 
@@ -209,9 +205,9 @@
 				<h2 class="text-2xl font-bold mb-6 text-center">Results</h2>
 				
 				<div class="text-center mb-6">
-					<div class="text-5xl font-bold text-purple-600 mb-2">{getPlayerScore()}</div>
+					<div class="text-5xl font-bold text-purple-600 mb-2">{playerScore}</div>
 					<p class="text-gray-600">Your Score</p>
-					<p class="text-sm text-gray-500 mt-2">Rank: #{getPlayerRank()}</p>
+					<p class="text-sm text-gray-500 mt-2">Rank: #{playerRank}</p>
 				</div>
 
 				<div class="text-center py-4">
@@ -224,19 +220,19 @@
 				
 				<div class="text-center mb-6">
 					<div class="text-6xl mb-4">
-						{#if getPlayerRank() === 1}
+						{#if playerRank === 1}
 							🏆
-						{:else if getPlayerRank() === 2}
+						{:else if playerRank === 2}
 							🥈
-						{:else if getPlayerRank() === 3}
+						{:else if playerRank === 3}
 							🥉
 						{:else}
 							🎯
 						{/if}
 					</div>
-					<div class="text-4xl font-bold text-purple-600 mb-2">{getPlayerScore()}</div>
+					<div class="text-4xl font-bold text-purple-600 mb-2">{playerScore}</div>
 					<p class="text-gray-600">Your Final Score</p>
-					<p class="text-xl font-semibold mt-2">Rank: #{getPlayerRank()}</p>
+					<p class="text-xl font-semibold mt-2">Rank: #{playerRank}</p>
 				</div>
 
 				<div class="text-center py-4">

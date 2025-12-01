@@ -187,7 +187,7 @@ docker-compose down
 npm run build
 
 # Start the server
-NODE_ENV=production node build
+NODE_ENV=production node server.js
 ```
 
 ## Contributing 🤝
