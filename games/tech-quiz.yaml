@@ -5,6 +5,8 @@ settings:
   pointsPerCorrectAnswer: 1000
   timeBonus: true
   showLeaderboardAfterEachQuestion: true
+  showCountdown: true
+  autoProceedWhenAllAnswered: false
 
 questions:
   - question: "What does HTML stand for?"

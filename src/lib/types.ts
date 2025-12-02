@@ -20,6 +20,8 @@ export interface GameSettings {
 	pointsPerCorrectAnswer: number;
 	timeBonus: boolean; // bonus points for faster answers
 	showLeaderboardAfterEachQuestion: boolean;
+	showCountdown?: boolean; // show countdown timer during reading and answering
+	autoProceedWhenAllAnswered?: boolean; // automatically proceed to scoreboard when all players have answered
 }
 
 export interface GameConfig {

@@ -19,7 +19,7 @@ export class GameManager {
 	}
 
 	createGame(config: GameConfig): string {
-		const gameId = nanoid(8);
+		const gameId = nanoid(4);
 		const gameState: GameState = {
 			gameId,
 			config,
@@ -88,6 +88,32 @@ export class GameManager {
 		}
 
 		player.answers[game.currentQuestionIndex] = answerIndices;
+		return true;
+	}
+
+	getAnsweredCount(gameId: string): number {
+		const game = this.games.get(gameId);
+		if (!game || game.currentQuestionIndex < 0) {
+			return 0;
+		}
+
+		return Object.values(game.players).filter(
+			player => player.answers[game.currentQuestionIndex] !== undefined
+		).length;
+	}
+
+	renamePlayer(gameId: string, playerId: string, newName: string): boolean {
+		const game = this.games.get(gameId);
+		if (!game) {
+			return false;
+		}
+
+		const player = game.players[playerId];
+		if (!player) {
+			return false;
+		}
+
+		player.name = newName;
 		return true;
 	}
 

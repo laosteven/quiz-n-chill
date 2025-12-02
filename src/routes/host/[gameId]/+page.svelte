@@ -4,12 +4,20 @@
 	import { io, type Socket } from 'socket.io-client';
 	import type { GameState, LeaderboardEntry } from '$lib/types';
 	import QRCode from 'qrcode';
+	import { Toaster, toast } from 'svelte-sonner';
 
 	let socket: Socket;
 	let game = $state<GameState | null>(null);
 	let leaderboard = $state<LeaderboardEntry[]>([]);
 	let qrCodeUrl = $state('');
 	let playerCount = $derived(game ? Object.keys(game.players).length : 0);
+	let answeredCount = $state(0);
+	let editingPlayerId = $state<string | null>(null);
+	let editingPlayerName = $state('');
+	let readTimeRemaining = $state(0);
+	let answerTimeRemaining = $state(0);
+	let readInterval: any;
+	let answerInterval: any;
 	
 	const gameId = $page.params.gameId;
 	const joinUrl = typeof window !== 'undefined' 
@@ -46,27 +54,84 @@
 
 		socket.on('game:started', (updatedGame: GameState) => {
 			game = updatedGame;
+			startReadTimer();
 		});
 
 		socket.on('game:state-update', (updatedGame: GameState) => {
 			game = updatedGame;
+			if (game.phase === 'question-reading') {
+				startReadTimer();
+			} else if (game.phase === 'question-answering') {
+				startAnswerTimer();
+			} else {
+				clearTimers();
+			}
 		});
 
 		socket.on('game:scoreboard', ({ game: updatedGame, leaderboard: lb }) => {
 			game = updatedGame;
 			leaderboard = lb;
+			clearTimers();
 		});
 
 		socket.on('game:ended', ({ leaderboard: lb }) => {
 			leaderboard = lb;
+			clearTimers();
+		});
+
+		socket.on('player:answered', ({ answeredCount: count }: { answeredCount: number }) => {
+			answeredCount = count;
+		});
+
+		socket.on('player:renamed', ({ oldName, newName }: { oldName: string; newName: string }) => {
+			toast.success(`Renamed "${oldName}" to "${newName}"`);
 		});
 	});
 
 	onDestroy(() => {
+		clearTimers();
 		if (socket) {
 			socket.disconnect();
 		}
 	});
+
+	function clearTimers() {
+		if (readInterval) clearInterval(readInterval);
+		if (answerInterval) clearInterval(answerInterval);
+		readTimeRemaining = 0;
+		answerTimeRemaining = 0;
+	}
+
+	function startReadTimer() {
+		clearTimers();
+		if (!game || !game.config.settings.showCountdown) return;
+		
+		const question = game.config.questions[game.currentQuestionIndex];
+		readTimeRemaining = question.readTime;
+		
+		readInterval = setInterval(() => {
+			readTimeRemaining--;
+			if (readTimeRemaining <= 0) {
+				clearInterval(readInterval);
+			}
+		}, 1000);
+	}
+
+	function startAnswerTimer() {
+		clearTimers();
+		if (!game || !game.config.settings.showCountdown) return;
+		
+		const question = game.config.questions[game.currentQuestionIndex];
+		answerTimeRemaining = question.timeLimit;
+		answeredCount = 0;
+		
+		answerInterval = setInterval(() => {
+			answerTimeRemaining--;
+			if (answerTimeRemaining <= 0) {
+				clearInterval(answerInterval);
+			}
+		}, 1000);
+	}
 
 	function startGame() {
 		socket.emit('host:start-game', gameId);
@@ -88,11 +153,30 @@
 		socket.emit('host:end-game', gameId);
 	}
 
+	function startEditingPlayer(playerId: string, currentName: string) {
+		editingPlayerId = playerId;
+		editingPlayerName = currentName;
+	}
+
+	function cancelEditing() {
+		editingPlayerId = null;
+		editingPlayerName = '';
+	}
+
+	function savePlayerName(playerId: string) {
+		if (editingPlayerName.trim() && editingPlayerName.trim() !== game?.players[playerId]?.name) {
+			socket.emit('host:rename-player', { playerId, newName: editingPlayerName.trim() });
+		}
+		cancelEditing();
+	}
+
 	function getYouTubeEmbedUrl(url: string): string {
 		const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
 		return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
 	}
 </script>
+
+<Toaster position="top-center" />
 
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
 	<div class="max-w-6xl mx-auto">
@@ -121,8 +205,39 @@
 							<p class="font-semibold mb-2">Players ({playerCount}):</p>
 							<div class="space-y-2 max-h-64 overflow-y-auto">
 								{#each Object.values(game.players) as player}
-									<div class="bg-gray-100 p-3 rounded">
-										{player.name}
+									<div class="bg-gray-100 p-3 rounded flex items-center justify-between">
+										{#if editingPlayerId === player.id}
+											<input
+												type="text"
+												bind:value={editingPlayerName}
+												class="flex-1 px-2 py-1 border border-gray-300 rounded mr-2"
+												onkeydown={(e) => {
+													if (e.key === 'Enter') savePlayerName(player.id);
+													if (e.key === 'Escape') cancelEditing();
+												}}
+												autofocus
+											/>
+											<button
+												onclick={() => savePlayerName(player.id)}
+												class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-1"
+											>
+												✓
+											</button>
+											<button
+												onclick={cancelEditing}
+												class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+											>
+												✕
+											</button>
+										{:else}
+											<span>{player.name}</span>
+											<button
+												onclick={() => startEditingPlayer(player.id, player.name)}
+												class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+											>
+												Rename
+											</button>
+										{/if}
 									</div>
 								{/each}
 							</div>
@@ -145,7 +260,18 @@
 			<div class="bg-white rounded-lg shadow-xl p-8 mb-8">
 				<div class="mb-4 flex justify-between items-center">
 					<span class="text-sm text-gray-600">Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span>
-					<span class="text-sm font-semibold text-purple-600">{playerCount} players</span>
+					<div class="flex gap-4 items-center">
+						{#if game.phase === 'question-answering'}
+							<span class="text-sm font-semibold text-blue-600">
+								{answeredCount} / {playerCount} answered
+							</span>
+						{/if}
+						{#if game.config.settings.showCountdown}
+							<span class="text-lg font-bold text-purple-600">
+								{game.phase === 'question-reading' ? readTimeRemaining : answerTimeRemaining}s
+							</span>
+						{/if}
+					</div>
 				</div>
 
 				{#if question.backgroundUrl}

@@ -75,7 +75,32 @@ export function setupSocketIO(httpServer: HTTPServer) {
 			if (gameId && playerId) {
 				if (gameManager.submitAnswer(gameId, playerId, answerIndices)) {
 					socket.emit('answer:submitted', { answerIndices });
-					io.to(`game:${gameId}:host`).emit('player:answered', { playerId });
+					
+					const answeredCount = gameManager.getAnsweredCount(gameId);
+					const game = gameManager.getGame(gameId);
+					const totalPlayers = game ? Object.keys(game.players).length : 0;
+					
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('player:answered', { 
+						playerId, 
+						answeredCount, 
+						totalPlayers 
+					});
+
+					// Auto-proceed if all players have answered and setting is enabled
+					if (game && game.config.settings.autoProceedWhenAllAnswered && answeredCount === totalPlayers) {
+						// Wait a short moment before proceeding
+						setTimeout(() => {
+							gameManager.calculateScores(gameId);
+							if (gameManager.showScoreboard(gameId)) {
+								const updatedGame = gameManager.getGame(gameId);
+								const leaderboard = gameManager.getLeaderboard(gameId);
+								io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
+									game: updatedGame,
+									leaderboard
+								});
+							}
+						}, 1000);
+					}
 				}
 			}
 		});
@@ -130,6 +155,46 @@ export function setupSocketIO(httpServer: HTTPServer) {
 				});
 				// Also emit a state update to set phase to 'finished' in all clients
 				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
+			}
+		});
+
+		socket.on('player:rename', ({ newName }: { newName: string }) => {
+			const gameId = socket.data.gameId;
+			const playerId = socket.data.playerId;
+			
+			if (gameId && playerId && newName.trim()) {
+				if (gameManager.renamePlayer(gameId, playerId, newName.trim())) {
+					const game = gameManager.getGame(gameId);
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
+				}
+			}
+		});
+
+		socket.on('host:rename-player', ({ playerId, newName }: { playerId: string; newName: string }) => {
+			const gameId = socket.data.gameId;
+			
+			if (!gameId) {
+				// Host might not have set gameId in socket.data, try to find it from the rooms
+				const rooms = Array.from(socket.rooms);
+				const hostRoom = rooms.find(room => room.startsWith('game:') && room.endsWith(':host'));
+				if (hostRoom) {
+					const extractedGameId = hostRoom.replace('game:', '').replace(':host', '');
+					if (extractedGameId && newName.trim()) {
+						const oldName = gameManager.getGame(extractedGameId)?.players[playerId]?.name;
+						if (gameManager.renamePlayer(extractedGameId, playerId, newName.trim())) {
+							const game = gameManager.getGame(extractedGameId);
+							io.to(`game:${extractedGameId}:host`).to(`game:${extractedGameId}:players`).emit('game:state-update', game);
+							socket.emit('player:renamed', { playerId, oldName, newName: newName.trim() });
+						}
+					}
+				}
+			} else if (newName.trim()) {
+				const oldName = gameManager.getGame(gameId)?.players[playerId]?.name;
+				if (gameManager.renamePlayer(gameId, playerId, newName.trim())) {
+					const game = gameManager.getGame(gameId);
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
+					socket.emit('player:renamed', { playerId, oldName, newName: newName.trim() });
+				}
 			}
 		});
 
