@@ -1,0 +1,82 @@
+name: "Technology Quiz"
+description: "Test your knowledge about technology and programming"
+
+settings:
+  pointsPerCorrectAnswer: 1000
+  timeBonus: true
+  showLeaderboardAfterEachQuestion: true
+
+questions:
+  - question: "What does HTML stand for?"
+    answerType: "single"
+    timeLimit: 20
+    readTime: 3
+    answers:
+      - text: "Hyper Text Markup Language"
+        correct: true
+      - text: "High Tech Modern Language"
+        correct: false
+      - text: "Home Tool Markup Language"
+        correct: false
+      - text: "Hyperlinks and Text Markup Language"
+        correct: false
+
+  - question: "Which of these are programming paradigms?"
+    answerType: "multiple"
+    timeLimit: 25
+    readTime: 4
+    answers:
+      - text: "Object-Oriented"
+        correct: true
+      - text: "Functional"
+        correct: true
+      - text: "Sequential"
+        correct: false
+      - text: "Procedural"
+        correct: true
+
+  - question: "What year was Python first released?"
+    answerType: "single"
+    timeLimit: 20
+    readTime: 3
+    answers:
+      - text: "1989"
+        correct: false
+      - text: "1991"
+        correct: true
+      - text: "1995"
+        correct: false
+      - text: "2000"
+        correct: false
+
+  - question: "What is the time complexity of binary search?"
+    answerType: "single"
+    timeLimit: 25
+    readTime: 4
+    answers:
+      - text: "O(n)"
+        correct: false
+      - text: "O(log n)"
+        correct: true
+      - text: "O(n²)"
+        correct: false
+      - text: "O(1)"
+        correct: false
+
+  - question: "Which companies are known as FAANG?"
+    answerType: "multiple"
+    timeLimit: 30
+    readTime: 5
+    answers:
+      - text: "Facebook (Meta)"
+        correct: true
+      - text: "Amazon"
+        correct: true
+      - text: "Apple"
+        correct: true
+      - text: "Netflix"
+        correct: true
+      - text: "Google"
+        correct: true
+      - text: "Microsoft"
+        correct: false

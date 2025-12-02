@@ -1,0 +1,67 @@
+name: "General Knowledge Quiz"
+description: "A fun quiz about general knowledge topics"
+
+settings:
+  pointsPerCorrectAnswer: 1000
+  timeBonus: true
+  showLeaderboardAfterEachQuestion: true
+
+questions:
+  - question: "What is the capital of France?"
+    answerType: "single"
+    timeLimit: 20
+    readTime: 3
+    answers:
+      - text: "London"
+        correct: false
+      - text: "Paris"
+        correct: true
+      - text: "Berlin"
+        correct: false
+      - text: "Madrid"
+        correct: false
+
+  - question: "Which programming languages are statically typed?"
+    answerType: "multiple"
+    timeLimit: 30
+    readTime: 5
+    answers:
+      - text: "JavaScript"
+        correct: false
+      - text: "TypeScript"
+        correct: true
+      - text: "Python"
+        correct: false
+      - text: "Java"
+        correct: true
+
+  - question: "What is this monument?"
+    answerType: "single"
+    timeLimit: 15
+    readTime: 2
+    mediaType: "image"
+    mediaUrl: "https://i.imgur.com/example.jpg"
+    answers:
+      - text: "Eiffel Tower"
+        correct: true
+      - text: "Big Ben"
+        correct: false
+      - text: "Statue of Liberty"
+        correct: false
+      - text: "Colosseum"
+        correct: false
+
+  - question: "Which ocean is the largest?"
+    answerType: "single"
+    timeLimit: 20
+    readTime: 3
+    # backgroundUrl: "https://i.imgur.com/ocean-bg.jpg"
+    answers:
+      - text: "Atlantic Ocean"
+        correct: false
+      - text: "Indian Ocean"
+        correct: false
+      - text: "Pacific Ocean"
+        correct: true
+      - text: "Arctic Ocean"
+        correct: false
