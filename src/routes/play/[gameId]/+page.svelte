@@ -15,8 +15,8 @@
 	let newPlayerName = $state('');
 	let readTimeRemaining = $state(0);
 	let answerTimeRemaining = $state(0);
-	let readInterval: any;
-	let answerInterval: any;
+	let readInterval: NodeJS.Timeout | undefined;
+	let answerInterval: NodeJS.Timeout | undefined;
 	
 	const gameId = $page.params.gameId;
 
@@ -320,7 +320,7 @@
 								onclick={() => toggleAnswer(i)}
 								class="p-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {
 									selectedAnswers.includes(i) 
-										? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white ring-${color.bg.replace('bg-', '')}`
+										? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white`
 										: `${color.bg} ${color.text} opacity-80 hover:opacity-100`
 								}"
 							>

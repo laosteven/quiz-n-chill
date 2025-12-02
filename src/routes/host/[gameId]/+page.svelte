@@ -16,8 +16,8 @@
 	let editingPlayerName = $state('');
 	let readTimeRemaining = $state(0);
 	let answerTimeRemaining = $state(0);
-	let readInterval: any;
-	let answerInterval: any;
+	let readInterval: NodeJS.Timeout | undefined;
+	let answerInterval: NodeJS.Timeout | undefined;
 	
 	const gameId = $page.params.gameId;
 	const joinUrl = typeof window !== 'undefined' 
