@@ -55,7 +55,7 @@ questions:
     answerType: "single"
     timeLimit: 20
     readTime: 3
-    backgroundUrl: "https://i.imgur.com/ocean-bg.jpg"
+    # backgroundUrl: "https://i.imgur.com/ocean-bg.jpg"
     answers:
       - text: "Atlantic Ocean"
         correct: false

@@ -97,13 +97,13 @@
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
 	<div class="max-w-6xl mx-auto">
 		<h1 class="text-4xl font-bold text-white mb-8 text-center">
-			{game?.config.name || 'Quiz Game'} - Host Panel
+			{game?.config.name || 'Quiz Game'} - Host panel
 		</h1>
 
 		{#if game?.phase === 'lobby'}
 			<div class="bg-white rounded-lg shadow-xl p-8 mb-8">
-				<h2 class="text-2xl font-bold mb-4">Waiting for Players</h2>
-				<p class="text-gray-600 mb-4">Game Code: <span class="text-3xl font-mono font-bold text-purple-600">{gameId}</span></p>
+				<h2 class="text-2xl font-bold mb-4">Waiting for players</h2>
+				<p class="text-gray-600 mb-4">Game code: <span class="text-3xl font-mono font-bold text-purple-600">{gameId}</span></p>
 				
 				<div class="flex gap-8 items-start">
 					<div class="flex-1">
@@ -135,7 +135,7 @@
 					disabled={playerCount === 0}
 					class="mt-6 w-full bg-green-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
 				>
-					Start Game
+					Start game
 				</button>
 			</div>
 		{/if}
@@ -180,7 +180,7 @@
 							onclick={startAnswering}
 							class="bg-blue-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-blue-700"
 						>
-							Show Answers Now
+							Show answers now
 						</button>
 					</div>
 				{:else}
@@ -198,7 +198,7 @@
 							onclick={showScoreboard}
 							class="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-orange-700"
 						>
-							Show Results
+							Show results
 						</button>
 					</div>
 				{/if}
@@ -208,11 +208,11 @@
 		{#if game?.phase === 'scoreboard'}
 			{@const question = game.config.questions[game.currentQuestionIndex]}
 			<div class="bg-white rounded-lg shadow-xl p-8 mb-8">
-				<h2 class="text-2xl font-bold mb-6">Question Results</h2>
+				<h2 class="text-2xl font-bold mb-6">Question results</h2>
 
 				<div class="mb-6">
 					<p class="text-lg mb-2"><strong>Question:</strong> {question.question}</p>
-					<p class="text-lg"><strong>Correct Answer(s):</strong></p>
+					<p class="text-lg"><strong>Correct answer(s):</strong></p>
 					<div class="grid grid-cols-2 gap-4 mt-2">
 						{#each question.answers as answer, i}
 							<div class="p-3 rounded-lg {answer.correct ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-100'}">
@@ -226,7 +226,7 @@
 					</div>
 				</div>
 
-				<h3 class="text-xl font-bold mb-4">Top Scores</h3>
+				<h3 class="text-xl font-bold mb-4">Top scores</h3>
 				<div class="space-y-2 mb-6">
 					{#each leaderboard.slice(0, 5) as entry}
 						<div class="flex items-center justify-between bg-gray-100 p-3 rounded">
@@ -243,14 +243,14 @@
 					onclick={nextQuestion}
 					class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
 				>
-					{game.currentQuestionIndex + 1 < game.config.questions.length ? 'Next Question' : 'Show Final Results'}
+					{game.currentQuestionIndex + 1 < game.config.questions.length ? 'Next question' : 'Show final results'}
 				</button>
 			</div>
 		{/if}
 
 		{#if game?.phase === 'leaderboard'}
 			<div class="bg-white rounded-lg shadow-xl p-8">
-				<h2 class="text-3xl font-bold mb-8 text-center">Final Leaderboard</h2>
+				<h2 class="text-3xl font-bold mb-8 text-center">Final leaderboard</h2>
 
 				<div class="space-y-3">
 					{#each leaderboard as entry}
@@ -270,17 +270,17 @@
 					onclick={endGame}
 					class="mt-8 w-full bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-red-700"
 				>
-					End Game
+					End game
 				</button>
 			</div>
 		{/if}
 
 		{#if game?.phase === 'finished'}
 			<div class="bg-white rounded-lg shadow-xl p-8 text-center">
-				<h2 class="text-3xl font-bold mb-4">Game Finished!</h2>
+				<h2 class="text-3xl font-bold mb-4">Game finished!</h2>
 				<p class="text-gray-600 mb-6">Thank you for playing!</p>
 				<a href="/" class="inline-block bg-blue-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-blue-700">
-					Create New Game
+					Create new game
 				</a>
 			</div>
 		{/if}

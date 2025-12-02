@@ -57,12 +57,12 @@
 		</div>
 
 		<div class="bg-white rounded-2xl shadow-2xl p-8">
-			<h2 class="text-2xl font-bold mb-6">Create a New Game</h2>
+			<h2 class="text-2xl font-bold mb-6">Create a new game</h2>
 
 			<div class="space-y-6">
 				<div>
 					<label for="game-select" class="block text-sm font-medium text-gray-700 mb-2">
-						Select Game Configuration
+						Select game configuration
 					</label>
 					<select
 						id="game-select"
@@ -82,32 +82,6 @@
 				>
 					{loading ? 'Creating Game...' : 'Create Game as Host'}
 				</button>
-			</div>
-
-			<div class="mt-8 pt-8 border-t border-gray-200">
-				<h3 class="text-lg font-semibold mb-4">Features:</h3>
-				<ul class="space-y-2 text-gray-600">
-					<li class="flex items-center gap-2">
-						<span class="text-green-600">✓</span>
-						Host controls the game flow
-					</li>
-					<li class="flex items-center gap-2">
-						<span class="text-green-600">✓</span>
-						Players join via QR code or game code
-					</li>
-					<li class="flex items-center gap-2">
-						<span class="text-green-600">✓</span>
-						Real-time scoreboard and leaderboard
-					</li>
-					<li class="flex items-center gap-2">
-						<span class="text-green-600">✓</span>
-						Support for images and videos
-					</li>
-					<li class="flex items-center gap-2">
-						<span class="text-green-600">✓</span>
-						Single and multiple choice questions
-					</li>
-				</ul>
 			</div>
 		</div>
 

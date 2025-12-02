@@ -1,8 +1,22 @@
 import type { GameState, GameConfig, Player, LeaderboardEntry } from '$lib/types';
 import { nanoid } from 'nanoid';
 
+// Use globalThis to ensure single instance across all module resolutions
+const GAME_MANAGER_KEY = Symbol.for('quiz-n-chill.gameManager');
+
 export class GameManager {
 	private games: Map<string, GameState> = new Map();
+	
+	constructor() {
+		// Enforce singleton pattern using globalThis
+		const globalAny = globalThis as any;
+		if (globalAny[GAME_MANAGER_KEY]) {
+			console.log('⚠️  Reusing existing GameManager instance');
+			return globalAny[GAME_MANAGER_KEY];
+		}
+		globalAny[GAME_MANAGER_KEY] = this;
+		console.log('✨ Created new GameManager instance');
+	}
 
 	createGame(config: GameConfig): string {
 		const gameId = nanoid(8);

@@ -15,9 +15,21 @@
 	const gameId = $page.params.gameId;
 
 	onMount(() => {
-		socket = io();
+		console.log('🔌 Connecting to Socket.IO...');
+		socket = io({
+			transports: ['websocket', 'polling']
+		});
+
+		socket.on('connect', () => {
+			console.log('✅ Connected to Socket.IO server:', socket.id);
+		});
+
+		socket.on('connect_error', (error) => {
+			console.error('❌ Socket.IO connection error:', error);
+		});
 
 		socket.on('player:joined', ({ playerId, player: p }: { playerId: string; player: Player }) => {
+			console.log('✅ Player joined successfully:', playerId);
 			player = p;
 			joined = true;
 			localStorage.setItem(`player:${gameId}`, JSON.stringify({ playerId, playerName: p.name }));
@@ -44,6 +56,7 @@
 		});
 
 		socket.on('error', (error: { message: string }) => {
+			console.error('❌ Server error:', error);
 			alert(error.message);
 		});
 
@@ -64,6 +77,8 @@
 
 	function joinGame() {
 		if (playerName.trim()) {
+			console.log(`🎮 Attempting to join game "${gameId}" as "${playerName.trim()}"`);
+			console.log('Socket connected:', socket?.connected);
 			socket.emit('player:join', { gameId, playerName: playerName.trim() });
 		}
 	}
@@ -102,8 +117,8 @@
 	<div class="max-w-2xl mx-auto">
 		{#if !joined}
 			<div class="bg-white rounded-lg shadow-xl p-8 mt-20">
-				<h1 class="text-3xl font-bold mb-6 text-center">Join Quiz</h1>
-				<p class="text-gray-600 mb-4 text-center">Game Code: <span class="font-mono font-bold text-purple-600">{gameId}</span></p>
+				<h1 class="text-3xl font-bold mb-6 text-center">Join quiz</h1>
+				<p class="text-gray-600 mb-4 text-center">Game code: <span class="font-mono font-bold text-purple-600">{gameId}</span></p>
 				
 				<div class="space-y-4">
 					<input
@@ -195,7 +210,7 @@
 				{:else}
 					<div class="text-center py-12">
 						<div class="text-6xl mb-4">✅</div>
-						<p class="text-xl font-bold text-green-600">Answer Submitted!</p>
+						<p class="text-xl font-bold text-green-600">Answer submitted!</p>
 						<p class="text-gray-600 mt-2">Waiting for other players...</p>
 					</div>
 				{/if}
@@ -216,7 +231,7 @@
 			</div>
 		{:else if game?.phase === 'leaderboard'}
 			<div class="bg-white rounded-lg shadow-xl p-8">
-				<h2 class="text-2xl font-bold mb-6 text-center">Final Results</h2>
+				<h2 class="text-2xl font-bold mb-6 text-center">Final results</h2>
 				
 				<div class="text-center mb-6">
 					<div class="text-6xl mb-4">
@@ -231,7 +246,7 @@
 						{/if}
 					</div>
 					<div class="text-4xl font-bold text-purple-600 mb-2">{playerScore}</div>
-					<p class="text-gray-600">Your Final Score</p>
+					<p class="text-gray-600">Your final score</p>
 					<p class="text-xl font-semibold mt-2">Rank: #{playerRank}</p>
 				</div>
 
@@ -241,7 +256,7 @@
 			</div>
 		{:else if game?.phase === 'finished'}
 			<div class="bg-white rounded-lg shadow-xl p-8 text-center">
-				<h2 class="text-2xl font-bold mb-4">Game Over!</h2>
+				<h2 class="text-2xl font-bold mb-4">Game over!</h2>
 				<p class="text-gray-600">Thanks for playing!</p>
 			</div>
 		{/if}
