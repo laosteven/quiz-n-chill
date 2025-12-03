@@ -1,11 +1,13 @@
 import type { GameState, GameConfig, Player, LeaderboardEntry } from '$lib/types';
 import { nanoid } from 'nanoid';
+import { PlayerService } from './services/player.service';
 
 // Use globalThis to ensure single instance across all module resolutions
 const GAME_MANAGER_KEY = Symbol.for('quiz-n-chill.gameManager');
 
 export class GameManager {
 	private games: Map<string, GameState> = new Map();
+	private playerServices: Map<string, PlayerService> = new Map(); // per-game player service
 	
 	constructor() {
 		// Enforce singleton pattern using globalThis
@@ -19,7 +21,7 @@ export class GameManager {
 	}
 
 	createGame(config: GameConfig): string {
-		const gameId = nanoid(8);
+		const gameId = nanoid(4);
 		const gameState: GameState = {
 			gameId,
 			config,
@@ -28,6 +30,7 @@ export class GameManager {
 			players: {}
 		};
 		this.games.set(gameId, gameState);
+		this.playerServices.set(gameId, new PlayerService());
 		return gameId;
 	}
 
@@ -35,22 +38,71 @@ export class GameManager {
 		return this.games.get(gameId);
 	}
 
-	addPlayer(gameId: string, playerName: string): { playerId: string; player: Player } | null {
+	getPlayerService(gameId: string): PlayerService | undefined {
+		return this.playerServices.get(gameId);
+	}
+
+	/**
+	 * Find the gameId that contains a player with the given socket/player id
+	 */
+	findGameByPlayerId(playerId: string): string | undefined {
+		for (const [gameId, game] of this.games.entries()) {
+			if (game.players && game.players[playerId]) {
+				return gameId;
+			}
+		}
+		return undefined;
+	}
+
+	addPlayer(gameId: string, playerId: string, playerName: string): { playerId: string; player: Player } | null {
 		const game = this.games.get(gameId);
-		if (!game || game.phase !== 'lobby') {
+		const playerService = this.playerServices.get(gameId);
+
+		if (!game || !playerService) {
+			console.log(`addPlayer failed: game or playerService not found for ${gameId}`);
 			return null;
 		}
 
-		const playerId = nanoid(10);
-		const player: Player = {
-			id: playerId,
-			name: playerName,
-			score: 0,
-			answers: {}
-		};
+		const cleanName = playerName.trim();
+		
+		// Check if username is taken by a connected player
+		if (playerService.isUsernameTaken(cleanName)) {
+			return null;
+		}
+
+		// Check for disconnected player with same name and remove them
+		const disconnectedPlayer = playerService.findDisconnectedPlayer(cleanName);
+		if (disconnectedPlayer) {
+			console.log(`Removing disconnected player "${disconnectedPlayer.name}" to allow new connection`);
+			playerService.removePlayer(disconnectedPlayer.id); 
+			delete game.players[disconnectedPlayer.id];
+		}
+
+		// Add the new player with score restoration
+		const restoredScore = playerService.getStoredScore(cleanName);
+		const player = playerService.addPlayer(playerId, cleanName, restoredScore);
 
 		game.players[playerId] = player;
+		
+		console.log(`Player joined: ${cleanName} (restored score: ${restoredScore})`);
+		
 		return { playerId, player };
+	}
+
+	/**
+	 * Check if a player can join; returns ok and optional reason
+	 */
+	canJoin(gameId: string, playerName: string): { ok: boolean; reason?: string } {
+		const game = this.games.get(gameId);
+		const playerService = this.playerServices.get(gameId);
+
+		if (!game) return { ok: false, reason: 'Game not found' };
+		if (!playerService) return { ok: false, reason: 'Internal server error' };
+
+		const cleanName = playerName.trim();
+		if (playerService.isUsernameTaken(cleanName)) return { ok: false, reason: 'Username already taken' };
+
+		return { ok: true };
 	}
 
 	startGame(gameId: string): boolean {
@@ -89,6 +141,89 @@ export class GameManager {
 
 		player.answers[game.currentQuestionIndex] = answerIndices;
 		return true;
+	}
+
+	getAnsweredCount(gameId: string): number {
+		const game = this.games.get(gameId);
+		if (!game || game.currentQuestionIndex < 0) {
+			return 0;
+		}
+
+		return Object.values(game.players).filter(
+			player => player.answers[game.currentQuestionIndex] !== undefined
+		).length;
+	}
+
+	renamePlayer(gameId: string, playerId: string, newName: string): { success: boolean; error?: string } {
+		const game = this.games.get(gameId);
+		const playerService = this.playerServices.get(gameId);
+		
+		if (!game || !playerService) {
+			return { success: false, error: 'Game not found' };
+		}
+
+		const player = game.players[playerId];
+		if (!player) {
+			return { success: false, error: 'Player not found' };
+		}
+
+		const cleanName = newName.trim();
+		
+		// Check if new username is taken by another active player
+		if (playerService.isUsernameTaken(cleanName, playerId)) {
+			return { success: false, error: 'Username already taken' };
+		}
+
+		// Update in player service and game state
+		playerService.updatePlayerName(playerId, cleanName);
+		player.name = cleanName;
+		
+		return { success: true };
+	}
+
+	markPlayerDisconnected(gameId: string, playerId: string): boolean {
+		const game = this.games.get(gameId);
+		const playerService = this.playerServices.get(gameId);
+		
+		if (!game || !playerService) {
+			return false;
+		}
+
+		const player = game.players[playerId];
+		if (!player) {
+			return false;
+		}
+
+		playerService.markDisconnected(playerId);
+		if (game.players[playerId]) {
+			game.players[playerId].connected = false;
+		}
+
+		console.log(`Player disconnected: ${player.name}`);
+		return true;
+	}
+
+	clearDisconnectedPlayers(gameId: string): number {
+		const game = this.games.get(gameId);
+		const playerService = this.playerServices.get(gameId);
+		
+		if (!game || !playerService) {
+			return 0;
+		}
+
+		const disconnectedIds: string[] = [];
+		for (const [id, player] of Object.entries(game.players)) {
+			if (player.connected === false) {
+				disconnectedIds.push(id);
+			}
+		}
+
+		disconnectedIds.forEach(id => {
+			playerService.removePlayer(id);
+			delete game.players[id];
+		});
+
+		return disconnectedIds.length;
 	}
 
 	calculateScores(gameId: string): void {

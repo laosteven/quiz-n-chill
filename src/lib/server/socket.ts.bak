@@ -1,3 +1,4 @@
+import { Server } from 'socket.io';
 import type { Server as HTTPServer } from 'http';
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { gameManager } from './game-manager';
@@ -31,16 +32,13 @@ export function initSocketServer(httpServer: HTTPServer) {
 		socket.on('host:join', (gameId: string) => {
 			socket.join(`game:${gameId}:host`);
 			socket.emit('host:joined', { gameId });
+			console.log(`Host joined game: ${gameId}`);
 		});
 
-		// Player joins with duplicate checking
+		// Player joins
 		socket.on('player:join', ({ gameId, playerName }: { gameId: string; playerName: string }) => {
-			const can = gameManager.canJoin(gameId, playerName);
-			if (!can.ok) {
-				socket.emit('error', { message: can.reason || 'Cannot join' });
-				return;
-			}
-
+			console.log(`Player attempting to join - Name: "${playerName}", GameID: "${gameId}"`);
+			
 			const result = gameManager.addPlayer(gameId, socket.id, playerName);
 			if (result) {
 				socket.join(`game:${gameId}:players`);
@@ -51,62 +49,20 @@ export function initSocketServer(httpServer: HTTPServer) {
 				io!.to(`game:${gameId}:host`).emit('player:added', result.player);
 				broadcastGameState(gameId);
 			} else {
-				socket.emit('error', { message: 'Failed to add player' });
+				console.log(`Failed to add player "${playerName}" to game "${gameId}"`);
+				socket.emit('error', { message: 'Username already taken or game not in lobby' });
 			}
-		});
-
-		// Player renames themselves
-		socket.on('player:rename', ({ newName }: { newName: string }) => {
-			const gameId = socket.data.gameId;
-			const playerId = socket.data.playerId;
-			
-			if (gameId && playerId) {
-				const result = gameManager.renamePlayer(gameId, playerId, newName);
-				if (result.success) {
-					broadcastGameState(gameId);
-				} else {
-					socket.emit('error', { message: result.error || 'Failed to rename' });
-				}
-			}
-		});
-
-		// Host renames a player
-		socket.on('host:rename-player', ({ playerId, newName }: { playerId: string; newName: string }) => {
-			const rooms = Array.from(socket.rooms);
-			const hostRoom = rooms.find(room => room.startsWith('game:') && room.endsWith(':host'));
-			if (!hostRoom) return;
-
-			const gameId = hostRoom.replace('game:', '').replace(':host', '');
-			const game = gameManager.getGame(gameId);
-			const oldName = game?.players[playerId]?.name;
-
-			const result = gameManager.renamePlayer(gameId, playerId, newName);
-			if (result.success) {
-				// Notify the player about the name change
-				io!.to(playerId).emit('name:updated-by-host', {
-					oldName,
-					newName: newName.trim(),
-					message: `Host updated your name from "${oldName}" to "${newName.trim()}"`
-				});
-				
-				socket.emit('player:renamed', { playerId, oldName, newName: newName.trim() });
-				broadcastGameState(gameId);
-			} else {
-				socket.emit('error', { message: result.error || 'Failed to rename player' });
-			}
-		});
-
-		// Game flow handlers
-		socket.on('host:start-game', (gameId: string) => {
+		});		socket.on('host:start-game', (gameId: string) => {
 			if (gameManager.startGame(gameId)) {
 				const game = gameManager.getGame(gameId);
-				io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:started', game);
+				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:started', game);
 				
 				const question = game?.config.questions[0];
 				if (question) {
 					setTimeout(() => {
 						if (gameManager.startAnswering(gameId)) {
-							broadcastGameState(gameId);
+							const updatedGame = gameManager.getGame(gameId);
+							io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', updatedGame);
 						}
 					}, question.readTime * 1000);
 				}
@@ -115,7 +71,8 @@ export function initSocketServer(httpServer: HTTPServer) {
 
 		socket.on('host:start-answering', (gameId: string) => {
 			if (gameManager.startAnswering(gameId)) {
-				broadcastGameState(gameId);
+				const game = gameManager.getGame(gameId);
+				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
 			}
 		});
 
@@ -131,20 +88,21 @@ export function initSocketServer(httpServer: HTTPServer) {
 					const game = gameManager.getGame(gameId);
 					const totalPlayers = game ? Object.keys(game.players).length : 0;
 					
-					io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('player:answered', { 
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('player:answered', { 
 						playerId, 
 						answeredCount, 
 						totalPlayers 
 					});
 
-					// Auto-proceed if enabled and all answered
+					// Auto-proceed if all players have answered and setting is enabled
 					if (game && game.config.settings.autoProceedWhenAllAnswered && answeredCount === totalPlayers) {
+						// Wait a short moment before proceeding
 						setTimeout(() => {
 							gameManager.calculateScores(gameId);
 							if (gameManager.showScoreboard(gameId)) {
 								const updatedGame = gameManager.getGame(gameId);
 								const leaderboard = gameManager.getLeaderboard(gameId);
-								io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
+								io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
 									game: updatedGame,
 									leaderboard
 								});
@@ -160,7 +118,7 @@ export function initSocketServer(httpServer: HTTPServer) {
 			if (gameManager.showScoreboard(gameId)) {
 				const game = gameManager.getGame(gameId);
 				const leaderboard = gameManager.getLeaderboard(gameId);
-				io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
+				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
 					game,
 					leaderboard
 				});
@@ -171,20 +129,22 @@ export function initSocketServer(httpServer: HTTPServer) {
 			if (gameManager.nextQuestion(gameId)) {
 				const game = gameManager.getGame(gameId);
 				
+				// If we've reached the leaderboard phase (final results), send leaderboard data
 				if (game?.phase === 'leaderboard') {
 					const leaderboard = gameManager.getLeaderboard(gameId);
-					io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:scoreboard', {
 						game,
 						leaderboard
 					});
 				} else {
-					broadcastGameState(gameId);
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
 					
 					if (game?.phase === 'question-reading') {
 						const question = game.config.questions[game.currentQuestionIndex];
 						setTimeout(() => {
 							if (gameManager.startAnswering(gameId)) {
-								broadcastGameState(gameId);
+								const updatedGame = gameManager.getGame(gameId);
+								io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', updatedGame);
 							}
 						}, question.readTime * 1000);
 					}
@@ -196,40 +156,60 @@ export function initSocketServer(httpServer: HTTPServer) {
 			if (gameManager.endGame(gameId)) {
 				const game = gameManager.getGame(gameId);
 				const leaderboard = gameManager.getLeaderboard(gameId);
-				io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:ended', {
+				// Broadcast final state and leaderboard so UIs can transition
+				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:ended', {
 					game,
 					leaderboard
 				});
-				broadcastGameState(gameId);
+				// Also emit a state update to set phase to 'finished' in all clients
+				io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
 			}
 		});
 
-		// Handle disconnection
-		socket.on('disconnect', () => {
-			let gameId = socket.data.gameId as string | undefined;
-			let playerId = socket.data.playerId as string | undefined;
-
-			// If socket.data wasn't populated (e.g. server restarted), try to find player by socket id
-			if (!gameId || !playerId) {
-				const foundGameId = gameManager.findGameByPlayerId(socket.id);
-				if (foundGameId) {
-					gameId = foundGameId;
-					playerId = socket.id;
+		socket.on('player:rename', ({ newName }: { newName: string }) => {
+			const gameId = socket.data.gameId;
+			const playerId = socket.data.playerId;
+			
+			if (gameId && playerId && newName.trim()) {
+				if (gameManager.renamePlayer(gameId, playerId, newName.trim())) {
+					const game = gameManager.getGame(gameId);
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
 				}
 			}
+		});
 
-			if (gameId && playerId) {
-				gameManager.markPlayerDisconnected(gameId, playerId);
-				broadcastGameState(gameId);
+		socket.on('host:rename-player', ({ playerId, newName }: { playerId: string; newName: string }) => {
+			const gameId = socket.data.gameId;
+			
+			if (!gameId) {
+				// Host might not have set gameId in socket.data, try to find it from the rooms
+				const rooms = Array.from(socket.rooms);
+				const hostRoom = rooms.find(room => room.startsWith('game:') && room.endsWith(':host'));
+				if (hostRoom) {
+					const extractedGameId = hostRoom.replace('game:', '').replace(':host', '');
+					if (extractedGameId && newName.trim()) {
+						const oldName = gameManager.getGame(extractedGameId)?.players[playerId]?.name;
+						if (gameManager.renamePlayer(extractedGameId, playerId, newName.trim())) {
+							const game = gameManager.getGame(extractedGameId);
+							io.to(`game:${extractedGameId}:host`).to(`game:${extractedGameId}:players`).emit('game:state-update', game);
+							socket.emit('player:renamed', { playerId, oldName, newName: newName.trim() });
+						}
+					}
+				}
+			} else if (newName.trim()) {
+				const oldName = gameManager.getGame(gameId)?.players[playerId]?.name;
+				if (gameManager.renamePlayer(gameId, playerId, newName.trim())) {
+					const game = gameManager.getGame(gameId);
+					io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit('game:state-update', game);
+					socket.emit('player:renamed', { playerId, oldName, newName: newName.trim() });
+				}
 			}
+		});
 
+		socket.on('disconnect', () => {
 			console.log('Client disconnected:', socket.id);
 		});
 	});
 
-	return io;
-}
-
-export function getIO() {
 	return io;
 }

@@ -11,8 +11,22 @@
 	let joined = $state(false);
 	let selectedAnswers = $state<number[]>([]);
 	let hasSubmitted = $state(false);
+	let editingName = $state(false);
+	let newPlayerName = $state('');
+	let readTimeRemaining = $state(0);
+	let answerTimeRemaining = $state(0);
+	let readInterval: NodeJS.Timeout | undefined;
+	let answerInterval: NodeJS.Timeout | undefined;
 	
 	const gameId = $page.params.gameId;
+
+	// Kahoot-style colors for answer buttons
+	const answerColors = [
+		{ bg: 'bg-red-500', hover: 'hover:bg-red-600', text: 'text-white', symbol: '▲' },
+		{ bg: 'bg-blue-500', hover: 'hover:bg-blue-600', text: 'text-white', symbol: '◆' },
+		{ bg: 'bg-yellow-500', hover: 'hover:bg-yellow-600', text: 'text-white', symbol: '●' },
+		{ bg: 'bg-green-500', hover: 'hover:bg-green-600', text: 'text-white', symbol: '■' }
+	];
 
 	onMount(() => {
 		console.log('🔌 Connecting to Socket.IO...');
@@ -37,22 +51,47 @@
 
 		socket.on('game:started', (updatedGame: GameState) => {
 			game = updatedGame;
+			startReadTimer();
 		});
 
 		socket.on('game:state-update', (updatedGame: GameState) => {
 			game = updatedGame;
-			if (game.phase === 'question-reading' || game.phase === 'question-answering') {
+			if (player && updatedGame.players[player.id]) {
+				player = updatedGame.players[player.id];
+			}
+			if (game.phase === 'question-reading') {
 				hasSubmitted = false;
 				selectedAnswers = [];
+				startReadTimer();
+			} else if (game.phase === 'question-answering') {
+				hasSubmitted = false;
+				selectedAnswers = [];
+				startAnswerTimer();
+			} else {
+				clearTimers();
 			}
 		});
 
 		socket.on('game:scoreboard', ({ game: updatedGame }) => {
 			game = updatedGame;
+			if (player && updatedGame.players[player.id]) {
+				player = updatedGame.players[player.id];
+			}
+			clearTimers();
 		});
 
 		socket.on('answer:submitted', () => {
 			hasSubmitted = true;
+		});
+
+		socket.on('name:updated-by-host', ({ oldName, newName, message }: { oldName: string; newName: string; message: string }) => {
+			console.log('Host renamed me:', message);
+			if (player) {
+				player.name = newName;
+				playerName = newName;
+				localStorage.setItem(`player:${gameId}`, JSON.stringify({ playerId: player.id, playerName: newName }));
+			}
+			alert(message); // Simple alert for now, could use a toast
 		});
 
 		socket.on('error', (error: { message: string }) => {
@@ -70,10 +109,48 @@
 	});
 
 	onDestroy(() => {
+		clearTimers();
 		if (socket) {
 			socket.disconnect();
 		}
 	});
+
+	function clearTimers() {
+		if (readInterval) clearInterval(readInterval);
+		if (answerInterval) clearInterval(answerInterval);
+		readTimeRemaining = 0;
+		answerTimeRemaining = 0;
+	}
+
+	function startReadTimer() {
+		clearTimers();
+		if (!game || !game.config.settings.showCountdown) return;
+		
+		const question = game.config.questions[game.currentQuestionIndex];
+		readTimeRemaining = question.readTime;
+		
+		readInterval = setInterval(() => {
+			readTimeRemaining--;
+			if (readTimeRemaining <= 0) {
+				clearInterval(readInterval);
+			}
+		}, 1000);
+	}
+
+	function startAnswerTimer() {
+		clearTimers();
+		if (!game || !game.config.settings.showCountdown) return;
+		
+		const question = game.config.questions[game.currentQuestionIndex];
+		answerTimeRemaining = question.timeLimit;
+		
+		answerInterval = setInterval(() => {
+			answerTimeRemaining--;
+			if (answerTimeRemaining <= 0) {
+				clearInterval(answerInterval);
+			}
+		}, 1000);
+	}
 
 	function joinGame() {
 		if (playerName.trim()) {
@@ -103,6 +180,25 @@
 		if (selectedAnswers.length > 0) {
 			socket.emit('player:submit-answer', { answerIndices: selectedAnswers });
 		}
+	}
+
+	function startRenaming() {
+		if (player) {
+			newPlayerName = player.name;
+			editingName = true;
+		}
+	}
+
+	function cancelRenaming() {
+		editingName = false;
+		newPlayerName = '';
+	}
+
+	function saveNewName() {
+		if (newPlayerName.trim() && newPlayerName.trim() !== player?.name) {
+			socket.emit('player:rename', { newName: newPlayerName.trim() });
+		}
+		editingName = false;
 	}
 
 	let playerScore = $derived(game && player ? game.players[player.id]?.score || 0 : 0);
@@ -140,8 +236,43 @@
 		{:else if game?.phase === 'lobby'}
 			<div class="bg-white rounded-lg shadow-xl p-8 mt-20 text-center">
 				<h2 class="text-2xl font-bold mb-4">Welcome, {player?.name}!</h2>
-				<p class="text-gray-600 mb-4">Waiting for host to start the game...</p>
-				<div class="animate-pulse text-4xl">⏳</div>
+				<p class="text-gray-600 mb-4">🎉 The game will start soon!</p>
+				<p class="text-sm text-gray-500 mb-6">Waiting for the host to begin...</p>
+				<div class="animate-pulse text-4xl mb-6">⏳</div>
+				
+				{#if !editingName}
+					<button
+						onclick={startRenaming}
+						class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+					>
+						Change Name
+					</button>
+				{:else}
+					<div class="flex gap-2 justify-center items-center">
+						<input
+							type="text"
+							bind:value={newPlayerName}
+							class="px-3 py-2 border border-gray-300 rounded-lg"
+							onkeydown={(e) => {
+								if (e.key === 'Enter') saveNewName();
+								if (e.key === 'Escape') cancelRenaming();
+							}}
+							autofocus
+						/>
+						<button
+							onclick={saveNewName}
+							class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+						>
+							Save
+						</button>
+						<button
+							onclick={cancelRenaming}
+							class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+						>
+							Cancel
+						</button>
+					</div>
+				{/if}
 			</div>
 		{:else if game?.phase === 'question-reading'}
 			{@const question = game.config.questions[game.currentQuestionIndex]}
@@ -151,6 +282,11 @@
 					<div class="mt-2">
 						<span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
 					</div>
+					{#if game.config.settings.showCountdown && readTimeRemaining > 0}
+						<div class="mt-2">
+							<span class="text-2xl font-bold text-orange-600">{readTimeRemaining}s</span>
+						</div>
+					{/if}
 				</div>
 
 				<h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
@@ -169,8 +305,11 @@
 			<div class="bg-white rounded-lg shadow-xl p-8">
 				<div class="mb-4 text-center">
 					<span class="text-sm text-gray-600">Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span>
-					<div class="mt-2">
+					<div class="mt-2 flex justify-center gap-4 items-center">
 						<span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
+						{#if game.config.settings.showCountdown && answerTimeRemaining > 0}
+							<span class="text-2xl font-bold text-red-600">{answerTimeRemaining}s</span>
+						{/if}
 					</div>
 				</div>
 
@@ -180,22 +319,30 @@
 					<p class="text-sm text-gray-600 mb-4 text-center">
 						{question.answerType === 'multiple' ? 'Select all correct answers' : 'Select one answer'}
 					</p>
+					{#if question.timeLimit}
+						<p class="text-xs text-gray-500 mb-4 text-center">Time limit: {question.timeLimit}s</p>
+					{/if}
 
-					<div class="space-y-3 mb-6">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 						{#each question.answers as answer, i}
+							{@const color = answerColors[i % answerColors.length]}
 							<button
 								onclick={() => toggleAnswer(i)}
-								class="w-full p-4 rounded-lg border-2 text-left font-semibold transition-all {
+								class="p-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {
 									selectedAnswers.includes(i) 
-										? 'border-purple-600 bg-purple-100' 
-										: 'border-gray-300 bg-white hover:border-gray-400'
+										? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white`
+										: `${color.bg} ${color.text} opacity-80 hover:opacity-100`
 								}"
 							>
-								<span class="mr-2">{String.fromCharCode(65 + i)}.</span>
-								{answer.text}
-								{#if selectedAnswers.includes(i)}
-									<span class="float-right text-purple-600">✓</span>
-								{/if}
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-3">
+										<span class="text-3xl">{color.symbol}</span>
+										<span class="text-left">{answer.text}</span>
+									</div>
+									{#if selectedAnswers.includes(i)}
+										<span class="text-2xl">✓</span>
+									{/if}
+								</div>
 							</button>
 						{/each}
 					</div>
@@ -203,7 +350,7 @@
 					<button
 						onclick={submitAnswer}
 						disabled={selectedAnswers.length === 0}
-						class="w-full bg-green-600 text-white py-4 px-6 rounded-lg font-bold text-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+						class="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-green-700 hover:to-green-600 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95"
 					>
 						Submit Answer
 					</button>
