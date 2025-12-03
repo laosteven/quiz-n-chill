@@ -36,6 +36,7 @@ export interface Player {
 	name: string;
 	score: number;
 	answers: Record<number, number[]>; // questionIndex -> answerIndices
+	connected?: boolean; // track connection status
 }
 
 export interface GameState {

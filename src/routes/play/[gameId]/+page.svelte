@@ -84,6 +84,16 @@
 			hasSubmitted = true;
 		});
 
+		socket.on('name:updated-by-host', ({ oldName, newName, message }: { oldName: string; newName: string; message: string }) => {
+			console.log('Host renamed me:', message);
+			if (player) {
+				player.name = newName;
+				playerName = newName;
+				localStorage.setItem(`player:${gameId}`, JSON.stringify({ playerId: player.id, playerName: newName }));
+			}
+			alert(message); // Simple alert for now, could use a toast
+		});
+
 		socket.on('error', (error: { message: string }) => {
 			console.error('❌ Server error:', error);
 			alert(error.message);
