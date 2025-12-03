@@ -42,11 +42,24 @@ export class GameManager {
 		return this.playerServices.get(gameId);
 	}
 
+	/**
+	 * Find the gameId that contains a player with the given socket/player id
+	 */
+	findGameByPlayerId(playerId: string): string | undefined {
+		for (const [gameId, game] of this.games.entries()) {
+			if (game.players && game.players[playerId]) {
+				return gameId;
+			}
+		}
+		return undefined;
+	}
+
 	addPlayer(gameId: string, playerId: string, playerName: string): { playerId: string; player: Player } | null {
 		const game = this.games.get(gameId);
 		const playerService = this.playerServices.get(gameId);
-		
-		if (!game || !playerService || game.phase !== 'lobby') {
+
+		if (!game || !playerService) {
+			console.log(`addPlayer failed: game or playerService not found for ${gameId}`);
 			return null;
 		}
 
@@ -61,7 +74,7 @@ export class GameManager {
 		const disconnectedPlayer = playerService.findDisconnectedPlayer(cleanName);
 		if (disconnectedPlayer) {
 			console.log(`Removing disconnected player "${disconnectedPlayer.name}" to allow new connection`);
-			playerService.removePlayer(disconnectedPlayer.id);
+			playerService.removePlayer(disconnectedPlayer.id); 
 			delete game.players[disconnectedPlayer.id];
 		}
 
@@ -74,6 +87,22 @@ export class GameManager {
 		console.log(`Player joined: ${cleanName} (restored score: ${restoredScore})`);
 		
 		return { playerId, player };
+	}
+
+	/**
+	 * Check if a player can join; returns ok and optional reason
+	 */
+	canJoin(gameId: string, playerName: string): { ok: boolean; reason?: string } {
+		const game = this.games.get(gameId);
+		const playerService = this.playerServices.get(gameId);
+
+		if (!game) return { ok: false, reason: 'Game not found' };
+		if (!playerService) return { ok: false, reason: 'Internal server error' };
+
+		const cleanName = playerName.trim();
+		if (playerService.isUsernameTaken(cleanName)) return { ok: false, reason: 'Username already taken' };
+
+		return { ok: true };
 	}
 
 	startGame(gameId: string): boolean {

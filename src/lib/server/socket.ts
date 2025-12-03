@@ -35,6 +35,12 @@ export function initSocketServer(httpServer: HTTPServer) {
 
 		// Player joins with duplicate checking
 		socket.on('player:join', ({ gameId, playerName }: { gameId: string; playerName: string }) => {
+			const can = gameManager.canJoin(gameId, playerName);
+			if (!can.ok) {
+				socket.emit('error', { message: can.reason || 'Cannot join' });
+				return;
+			}
+
 			const result = gameManager.addPlayer(gameId, socket.id, playerName);
 			if (result) {
 				socket.join(`game:${gameId}:players`);
@@ -45,7 +51,7 @@ export function initSocketServer(httpServer: HTTPServer) {
 				io!.to(`game:${gameId}:host`).emit('player:added', result.player);
 				broadcastGameState(gameId);
 			} else {
-				socket.emit('error', { message: 'Username already taken or game not in lobby' });
+				socket.emit('error', { message: 'Failed to add player' });
 			}
 		});
 
@@ -200,14 +206,23 @@ export function initSocketServer(httpServer: HTTPServer) {
 
 		// Handle disconnection
 		socket.on('disconnect', () => {
-			const gameId = socket.data.gameId;
-			const playerId = socket.data.playerId;
-			
+			let gameId = socket.data.gameId as string | undefined;
+			let playerId = socket.data.playerId as string | undefined;
+
+			// If socket.data wasn't populated (e.g. server restarted), try to find player by socket id
+			if (!gameId || !playerId) {
+				const foundGameId = gameManager.findGameByPlayerId(socket.id);
+				if (foundGameId) {
+					gameId = foundGameId;
+					playerId = socket.id;
+				}
+			}
+
 			if (gameId && playerId) {
 				gameManager.markPlayerDisconnected(gameId, playerId);
 				broadcastGameState(gameId);
 			}
-			
+
 			console.log('Client disconnected:', socket.id);
 		});
 	});

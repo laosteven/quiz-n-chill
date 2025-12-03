@@ -206,6 +206,13 @@
 							<div class="space-y-2 max-h-64 overflow-y-auto">
 								{#each Object.values(game.players) as player}
 									<div class="bg-gray-100 p-3 rounded flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											<span class="font-semibold">{player.name}</span>
+											{#if player.connected === false}
+												<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Disconnected</span>
+											{/if}
+										</div>
+
 										{#if editingPlayerId === player.id}
 											<input
 												type="text"
@@ -230,13 +237,17 @@
 												✕
 											</button>
 										{:else}
-											<span>{player.name}</span>
-											<button
-												onclick={() => startEditingPlayer(player.id, player.name)}
-												class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-											>
-												Rename
-											</button>
+											<div class="flex items-center gap-2">
+												<span class="mr-2"></span>
+												<button
+													onclick={() => startEditingPlayer(player.id, player.name)}
+													class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+													disabled={player.connected === false}
+													title={player.connected === false ? 'Player is disconnected' : 'Rename player'}
+												>
+													Rename
+												</button>
+											</div>
 										{/if}
 									</div>
 								{/each}
