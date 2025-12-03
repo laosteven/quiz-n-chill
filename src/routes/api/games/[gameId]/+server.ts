@@ -1,19 +1,18 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { gameManager } from '$lib/server/game-manager';
 
 export const GET: RequestHandler = async ({ params }) => {
-	// Access the global gameManager from server.js
-	const gameManager = (global as any).gameManager;
-	
-	if (!gameManager) {
-		return json({ error: 'Server not initialized' }, { status: 500 });
+	try {
+		const game = gameManager.getGame(params.gameId);
+
+		if (!game) {
+			return json({ error: 'Game not found' }, { status: 404 });
+		}
+
+		return json({ game });
+	} catch (err) {
+		console.error('Failed to fetch game:', err);
+		return json({ error: 'Failed to fetch game' }, { status: 500 });
 	}
-	
-	const game = gameManager.getGame(params.gameId);
-	
-	if (!game) {
-		return json({ error: 'Game not found' }, { status: 404 });
-	}
-	
-	return json({ game });
 };
