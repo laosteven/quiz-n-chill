@@ -153,6 +153,19 @@ export function initSocketServer(httpServer: HTTPServer) {
     socket.on("host:reveal-answers", (gameId: string) => {
       console.log(`host:reveal-answers received from ${socket.id} for game ${gameId}`);
       if (gameManager.revealAnswers(gameId)) {
+        // Emit explicit revealed answer indices to players so clients can highlight immediately
+        const game = gameManager.getGame(gameId);
+        const q = game?.config.questions?.[game.currentQuestionIndex];
+        const correctIndices: number[] = [];
+        if (q && Array.isArray(q.answers)) {
+          q.answers.forEach((a: any, idx: number) => {
+            if (a && a.correct) correctIndices.push(idx);
+          });
+        }
+        console.log(`Revealed answers for game ${gameId}:`, correctIndices);
+        io!.to(`game:${gameId}:players`).emit("answer:revealed", { answers: correctIndices });
+        io!.to(`game:${gameId}:host`).emit("answer:revealed", { answers: correctIndices });
+
         broadcastGameState(gameId);
       }
     });

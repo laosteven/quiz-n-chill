@@ -27,6 +27,7 @@
   let answerTimeRemaining = $state(0);
   let readInterval: NodeJS.Timeout | undefined;
   let answerInterval: NodeJS.Timeout | undefined;
+  let revealedAnswers = $state<number[]>([]);
   let context = $state<ChartContextValue>();
 
   // Calculate answer counts for current question
@@ -58,7 +59,8 @@
       const count = counts[i] || 0;
       const color =
         "var(--color-" + ANSWER_BUTTONS[i % ANSWER_BUTTONS.length].bg.replace("bg-", "") + ")";
-      arr.push({ letter, count, color });
+      const isCorrectAnswer = revealedAnswers.includes(i) || !!q.answers[i]?.correct;
+      arr.push({ letter, count, color, isCorrectAnswer });
     }
     return arr;
   });
@@ -184,6 +186,12 @@
       prevScore = prevPlayerScore;
 
       clearTimers();
+    });
+
+    // Listen for host revealing correct answers explicitly
+    socket.on("answer:revealed", ({ answers }: { answers: number[] }) => {
+      // answers is an array of indices marked correct by host
+      revealedAnswers = answers || [];
     });
 
     socket.on("answer:submitted", () => {
@@ -562,7 +570,9 @@
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             {@const wasSelected = currentQuestionSelections.includes(i)}
-            {@const isCorrectAnswer = answer.correct}
+            {@const isCorrectAnswer = revealedAnswers.length
+              ? revealedAnswers.includes(i)
+              : answer.correct}
             {@const isMultipleChoice = question.answerType === "multiple"}
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
@@ -617,7 +627,9 @@
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             {@const wasSelected = currentQuestionSelections.includes(i)}
-            {@const isCorrectAnswer = answer.correct}
+            {@const isCorrectAnswer = revealedAnswers.length
+              ? revealedAnswers.includes(i)
+              : answer.correct}
             {@const isMultipleChoice = question.answerType === "multiple"}
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
@@ -684,7 +696,10 @@
               {@const baseBarProps = getBarsProps(visibleSeries[0], 0)}
               {#each chartData as data, i (i)}
                 {@const wasSelected = currentQuestionSelections.includes(i)}
-                {#if wasSelected}
+                {@const isCorrectAnswer = revealedAnswers.length
+                  ? revealedAnswers.includes(i)
+                  : question.answers[i].correct}
+                {#if wasSelected && isCorrectAnswer}
                   <Bar {...baseBarProps} fill={data.color} {data} motion="tween" />
                 {:else}
                   <Bar
