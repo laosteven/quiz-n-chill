@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  quiz-app:
+  quiz-n-chill:
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,6 +10,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      # For production, set CORS_ORIGIN to your domain
-      # - CORS_ORIGIN=https://yourdomain.com
+    volumes:
+      - ./games:/app/games:ro
     restart: unless-stopped

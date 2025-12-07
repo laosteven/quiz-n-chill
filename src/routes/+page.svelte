@@ -54,7 +54,7 @@
 >
   <div class="max-w-2xl w-full">
     <div class="text-center mb-12">
-      <h1 class="text-6xl font-bold text-white mb-4">Quiz n' Chill</h1>
+      <h1 class="text-6xl font-bold text-white mb-4">Quiz & Chill</h1>
       <p class="text-xl text-white/90">Your self-hosted Kahoot alternative</p>
     </div>
 

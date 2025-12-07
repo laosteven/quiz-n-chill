@@ -1,4 +1,4 @@
-# Quiz n' Chill 🎮
+# Quiz & Chill 🎮
 
 A self-hosted Kahoot-like quiz application built with SvelteKit and Socket.IO. Create interactive quizzes with real-time multiplayer gameplay, perfect for classrooms, team building, or fun trivia nights!
 
@@ -15,25 +15,31 @@ A self-hosted Kahoot-like quiz application built with SvelteKit and Socket.IO. C
 
 ## Quick Start 🚀
 
-### Using Docker (Recommended)
+## Quick Start
 
-#### Development Mode
+### Using Docker Compose (Recommended)
 
-```bash
-docker-compose -f docker-compose.dev.yml up
-```
-
-Access at: http://localhost:5173
-
-#### Production Mode
+Get the `sample-game.yml` file
 
 ```bash
-docker-compose up
+wget -O games/sample-game.yml https://raw.githubusercontent.com/laosteven/quiz-n-chill/refs/heads/master/games/sample-game.yaml
 ```
 
-Access at: http://localhost:3000
+Get the docker compose file
 
-### Local Development
+```bash
+wget -O docker-compose.yml https://raw.githubusercontent.com/laosteven/quiz-n-chill/refs/heads/master/docker-compose.prod.yml
+```
+
+Start the container:
+
+```bash
+docker compose up -d
+```
+
+Open `http://localhost:3000` in your browser
+
+## Local Development
 
 1. **Install dependencies**
 
