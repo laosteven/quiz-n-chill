@@ -25,7 +25,7 @@
   onMount(async () => {
     // Generate QR code
     if (joinUrl) {
-      qrCodeUrl = await QRCode.toDataURL(joinUrl);
+      qrCodeUrl = await QRCode.toDataURL(joinUrl, { width: 300 });
     }
 
     // Fetch initial game state
@@ -185,80 +185,73 @@
     {#if game?.phase === "lobby"}
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
         <h2 class="text-2xl font-bold mb-4">Waiting for players</h2>
-        <p class="text-gray-600 mb-4">
-          Game code: <span class="text-3xl font-mono font-bold text-purple-600">{gameId}</span>
-        </p>
 
         <div class="flex gap-8 items-start">
           <div class="flex-1">
-            <p class="text-sm text-gray-600 mb-2">Scan QR code to join:</p>
+            <p class="font-semibold mb-2">Scan QR code to join:</p>
             {#if qrCodeUrl}
               <img
                 src={qrCodeUrl}
                 alt="QR Code"
-                class="w-64 h-64 border-4 border-gray-200 rounded-lg"
+                class="border-4 border-gray-200 rounded-lg mx-auto w-full"
               />
             {/if}
+            <p class="my-2 text-md text-center font-mono bg-gray-100 p-3 rounded break-all">{joinUrl}</p>
           </div>
 
           <div class="flex-1">
-            <p class="text-sm text-gray-600 mb-2">Or visit:</p>
-            <p class="text-lg font-mono bg-gray-100 p-3 rounded break-all">{joinUrl}</p>
-
-            <div class="mt-6">
-              <p class="font-semibold mb-2">Players ({playerCount}):</p>
-              <div class="space-y-2 max-h-64 overflow-y-auto">
-                {#each Object.values(game.players) as player}
-                  <div class="bg-gray-100 p-3 rounded flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                      <span class="font-semibold">{player.name}</span>
-                      {#if player.connected === false}
-                        <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded"
-                          >Disconnected</span
-                        >
-                      {/if}
-                    </div>
-
-                    {#if editingPlayerId === player.id}
-                      <input
-                        type="text"
-                        bind:value={editingPlayerName}
-                        class="flex-1 px-2 py-1 border border-gray-300 rounded mr-2"
-                        onkeydown={(e) => {
-                          if (e.key === "Enter") savePlayerName(player.id);
-                          if (e.key === "Escape") cancelEditing();
-                        }}
-                      />
-                      <button
-                        onclick={() => savePlayerName(player.id)}
-                        class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-1"
+            <p class="font-semibold mb-2">Players ({playerCount}):</p>
+            <div class="space-y-2 max-h-[410px] overflow-y-auto">
+              {#each Object.values(game.players) as player}
+                <div class="bg-gray-100 p-3 rounded flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <span class="font-semibold">{player.name}</span>
+                    {#if player.connected === false}
+                      <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded"
+                        >Disconnected</span
                       >
-                        ✓
-                      </button>
-                      <button
-                        onclick={cancelEditing}
-                        class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                      >
-                        ✕
-                      </button>
-                    {:else}
-                      <div class="flex items-center gap-2">
-                        <span class="mr-2"></span>
-                        <button
-                          onclick={() => startEditingPlayer(player.id, player.name)}
-                          class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                          disabled={player.connected === false}
-                          title={player.connected === false
-                            ? "Player is disconnected"
-                            : "Rename player"}
-                        >
-                          Rename
-                        </button>
-                      </div>
                     {/if}
                   </div>
-                {/each}
-              </div>
+
+                  {#if editingPlayerId === player.id}
+                    <input
+                      type="text"
+                      bind:value={editingPlayerName}
+                      class="flex-1 px-2 py-1 border border-gray-300 rounded mr-2"
+                      onkeydown={(e) => {
+                        if (e.key === "Enter") savePlayerName(player.id);
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                    />
+                    <button
+                      onclick={() => savePlayerName(player.id)}
+                      class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-1"
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onclick={cancelEditing}
+                      class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+                    >
+                      ✕
+                    </button>
+                  {:else}
+                    <div class="flex items-center gap-2">
+                      <span class="mr-2"></span>
+                      <button
+                        onclick={() => startEditingPlayer(player.id, player.name)}
+                        class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                        disabled={player.connected === false}
+                        title={player.connected === false
+                          ? "Player is disconnected"
+                          : "Rename player"}
+                      >
+                        Rename
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+              {/each}
             </div>
           </div>
         </div>
@@ -300,7 +293,11 @@
           </div>
         {/if}
 
-        <h2 class="text-3xl font-bold mb-6 relative z-10">{question.question}</h2>
+        <h2
+          class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+        >
+          {question.question}
+        </h2>
 
         {#if question.mediaType === "image" && question.mediaUrl}
           <img
@@ -336,8 +333,8 @@
           <div class="grid grid-cols-2 gap-4 mb-6">
             {#each question.answers as answer, i}
               <div class="bg-gray-100 p-4 rounded-lg border-2 border-gray-300">
-                <span class="font-bold mr-2">{String.fromCharCode(65 + i)}.</span>
-                {answer.text}
+                <span class="font-bold text-2xl mr-2">{String.fromCharCode(65 + i)}.</span>
+                <span class="text-2xl">{answer.text}</span>
               </div>
             {/each}
           </div>
@@ -357,10 +354,14 @@
     {#if game?.phase === "scoreboard"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
-        <h2 class="text-2xl font-bold mb-6">Question results</h2>
+        <h2 class="text-2xl font-bold mb-6">Question</h2>
 
         <div class="mb-6">
-          <p class="text-lg mb-2"><strong>Question:</strong> {question.question}</p>
+          <h2
+            class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+          >
+            {question.question}
+          </h2>
           <p class="text-lg"><strong>Correct answer(s):</strong></p>
           <div class="grid grid-cols-2 gap-4 mt-2">
             {#each question.answers as answer, i}

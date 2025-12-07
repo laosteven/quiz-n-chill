@@ -241,6 +241,10 @@
           >
             Join Game
           </button>
+
+          <p class="text-muted-foreground mt-4 text-sm text-center">
+            Make sure to use a unique name to keep your score!
+          </p>
         </div>
       </div>
     {:else if game?.phase === "lobby"}
@@ -248,14 +252,14 @@
         <h2 class="text-2xl font-bold mb-4">Welcome, {player?.name}!</h2>
         <p class="text-gray-600 mb-4">🎉 The game will start soon!</p>
         <p class="text-sm text-gray-500 mb-6">Waiting for the host to begin...</p>
-        <div class="animate-pulse text-4xl mb-6">⏳</div>
+        <div class="animate-pulse text-8xl mb-6">⏳</div>
 
         {#if !editingName}
           <button
             onclick={startRenaming}
             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
           >
-            Change Name
+            Change name
           </button>
         {:else}
           <div class="flex gap-2 justify-center items-center">

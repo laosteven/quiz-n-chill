@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import type { GameConfig } from "$lib/types";
+  import { onMount } from "svelte";
 
   let availableGames = $state<string[]>([]);
   let selectedGame = $state("");
@@ -82,7 +82,7 @@
           disabled={loading || !selectedGame}
           class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all"
         >
-          {loading ? "Creating Game..." : "Create Game as Host"}
+          {loading ? "Creating room..." : "Create room"}
         </button>
       </div>
     </div>

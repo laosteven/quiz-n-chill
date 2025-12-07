@@ -7,6 +7,9 @@
 
 <svelte:head>
   <link rel="icon" href={favicon} />
+  <title>Quiz n' Chill</title>
+  <meta name="description" content="Self-hosted quiz game" />
 </svelte:head>
+
 
 {@render children()}
