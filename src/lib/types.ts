@@ -36,6 +36,7 @@ export interface Player {
   name: string;
   score: number;
   answers: Record<number, number[]>; // questionIndex -> answerIndices
+  answerTimes?: Record<number, number>; // questionIndex -> submission timestamp
   connected?: boolean; // track connection status
 }
 
@@ -47,12 +48,14 @@ export interface GameState {
     | "lobby"
     | "question-reading"
     | "question-answering"
+    | "answer-review"
     | "scoreboard"
     | "leaderboard"
     | "finished";
   players: Record<string, Player>;
   questionStartTime?: number;
   answerStartTime?: number;
+  choicesShown?: boolean; 
 }
 
 export interface LeaderboardEntry {

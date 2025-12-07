@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, Player } from "$lib/types";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
@@ -13,6 +14,9 @@
   let hasSubmitted = $state(false);
   let editingName = $state(false);
   let newPlayerName = $state("");
+
+  // Track player's actual selections per question locally
+  let playerSelections = $state<Record<number, number[]>>({});
   let readTimeRemaining = $state(0);
   let answerTimeRemaining = $state(0);
   let readInterval: NodeJS.Timeout | undefined;
@@ -20,13 +24,7 @@
 
   const gameId = $page.params.gameId;
 
-  // Kahoot-style colors for answer buttons
-  const answerColors = [
-    { bg: "bg-red-500", hover: "hover:bg-red-600", text: "text-white", symbol: "▲" },
-    { bg: "bg-blue-500", hover: "hover:bg-blue-600", text: "text-white", symbol: "◆" },
-    { bg: "bg-yellow-500", hover: "hover:bg-yellow-600", text: "text-white", symbol: "●" },
-    { bg: "bg-green-500", hover: "hover:bg-green-600", text: "text-white", symbol: "■" },
-  ];
+  // Answer button styles are imported from ANSWER_BUTTONS
 
   onMount(() => {
     console.log("🔌 Connecting to Socket.IO...");
@@ -55,18 +53,62 @@
     });
 
     socket.on("game:state-update", (updatedGame: GameState) => {
+      const prevPhase = game?.phase;
       game = updatedGame;
       if (player && updatedGame.players[player.id]) {
         player = updatedGame.players[player.id];
+      } else if (!joined && socket && socket.id) {
+        // fallback: if the updated game already contains our socket id, assume we joined
+        const maybe = updatedGame.players?.[socket.id];
+        if (maybe) {
+          player = maybe;
+          joined = true;
+          localStorage.setItem(
+            `player:${gameId}`,
+            JSON.stringify({ playerId: player.id, playerName: player.name })
+          );
+        }
       }
+
+      // Handle phase transitions
+      const qIndex = game.currentQuestionIndex;
+      const serverPlayer = player && game.players ? game.players[player.id] : undefined;
+
+      // Load local selections from localStorage
+      const localSelectionsKey = `selections:${gameId}:${player?.id || "temp"}`;
+      const storedSelections = localStorage.getItem(localSelectionsKey);
+      if (storedSelections) {
+        try {
+          playerSelections = JSON.parse(storedSelections);
+        } catch (e) {
+          console.error("Failed to parse stored selections:", e);
+          playerSelections = {};
+        }
+      }
+
       if (game.phase === "question-reading") {
-        hasSubmitted = false;
-        selectedAnswers = [];
-        startReadTimer();
+        if (prevPhase !== "question-reading") {
+          hasSubmitted = false;
+          selectedAnswers = [];
+          startReadTimer();
+        }
       } else if (game.phase === "question-answering") {
-        hasSubmitted = false;
-        selectedAnswers = [];
-        startAnswerTimer();
+        // Always check if server has an answer for this player (even on refresh)
+        if (serverPlayer?.answers?.[qIndex] && serverPlayer.answers[qIndex].length > 0) {
+          hasSubmitted = true;
+          selectedAnswers = serverPlayer.answers[qIndex].slice();
+          // Also store this in local selections
+          playerSelections[qIndex] = serverPlayer.answers[qIndex].slice();
+          localStorage.setItem(localSelectionsKey, JSON.stringify(playerSelections));
+        } else if (prevPhase !== "question-answering") {
+          hasSubmitted = false;
+          selectedAnswers = playerSelections[qIndex] || [];
+        }
+        if (prevPhase !== "question-answering") startAnswerTimer();
+      } else if (game.phase === "answer-review") {
+        // Lock submission when in review phase and ensure we use local selections
+        hasSubmitted = true;
+        selectedAnswers = playerSelections[qIndex] || [];
       } else {
         clearTimers();
       }
@@ -82,6 +124,17 @@
 
     socket.on("answer:submitted", () => {
       hasSubmitted = true;
+    });
+
+    // Also mark submitted when the server broadcasts player:answered for this player
+    socket.on("player:answered", ({ playerId }: { playerId: string }) => {
+      if (player && player.id === playerId) {
+        hasSubmitted = true;
+      }
+    });
+
+    socket.on("player:join-failed", ({ message }: { message: string }) => {
+      alert(`Unable to join: ${message}`);
     });
 
     socket.on(
@@ -161,8 +214,21 @@
   function joinGame() {
     if (playerName.trim()) {
       console.log(`🎮 Attempting to join game "${gameId}" as "${playerName.trim()}"`);
-      console.log("Socket connected:", socket?.connected);
-      socket.emit("player:join", { gameId, playerName: playerName.trim() });
+      if (socket && socket.connected) {
+        socket.emit("player:join", { gameId, playerName: playerName.trim() });
+      } else {
+        console.log("Socket not connected yet, waiting for connection...");
+        const onConnect = () => {
+          socket.emit("player:join", { gameId, playerName: playerName.trim() });
+          socket.off("connect", onConnect);
+        };
+        socket.on("connect", onConnect);
+        // Fallback timeout
+        setTimeout(() => {
+          if (!socket.connected)
+            alert("Unable to connect to game server. Try refreshing the page.");
+        }, 3000);
+      }
     }
   }
 
@@ -170,6 +236,7 @@
     if (hasSubmitted || !game || game.phase !== "question-answering") return;
 
     const question = game.config.questions[game.currentQuestionIndex];
+    const qIndex = game.currentQuestionIndex;
 
     if (question.answerType === "single") {
       selectedAnswers = [index];
@@ -180,10 +247,17 @@
         selectedAnswers = [...selectedAnswers, index];
       }
     }
+
+    // Save to local selections
+    playerSelections[qIndex] = selectedAnswers.slice();
+    const localSelectionsKey = `selections:${gameId}:${player?.id || "temp"}`;
+    localStorage.setItem(localSelectionsKey, JSON.stringify(playerSelections));
   }
 
   function submitAnswer() {
     if (selectedAnswers.length > 0) {
+      // Immediately flip to submitted state so UI shows waiting message
+      hasSubmitted = true;
       socket.emit("player:submit-answer", { answerIndices: selectedAnswers });
     }
   }
@@ -207,6 +281,21 @@
     editingName = false;
   }
 
+  // Calculate answer counts for current question in answer-review phase
+  let counts = $derived.by(() => {
+    if (!game || game.currentQuestionIndex < 0) return {};
+    const result: Record<number, number> = {};
+    const qIndex = game.currentQuestionIndex;
+    Object.values(game.players).forEach((p) => {
+      const ans = p.answers[qIndex] || [];
+      ans.forEach((i) => {
+        result[i] = (result[i] || 0) + 1;
+      });
+    });
+    return result;
+  });
+  let max = $derived(Math.max(...Object.values(counts), 1));
+
   let playerScore = $derived(game && player ? game.players[player.id]?.score || 0 : 0);
   let playerRank = $derived.by(() => {
     if (!game || !player) return 0;
@@ -214,6 +303,12 @@
       .map((p) => p.score)
       .sort((a, b) => b - a);
     return scores.indexOf(playerScore) + 1;
+  });
+
+  // Derived state to get the current question's player selections
+  let currentQuestionSelections = $derived.by(() => {
+    if (!game || game.currentQuestionIndex < 0) return [];
+    return playerSelections[game.currentQuestionIndex] || [];
   });
 </script>
 
@@ -270,7 +365,6 @@
                 if (e.key === "Enter") saveNewName();
                 if (e.key === "Escape") cancelRenaming();
               }}
-              autofocus
             />
             <button
               onclick={saveNewName}
@@ -295,13 +389,8 @@
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
           <div class="mt-2">
-            <span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
+            <span class="text-sm font-semibold text-purple-600">Your score: {playerScore}</span>
           </div>
-          {#if game.config.settings.showCountdown && readTimeRemaining > 0}
-            <div class="mt-2">
-              <span class="text-2xl font-bold text-orange-600">{readTimeRemaining}s</span>
-            </div>
-          {/if}
         </div>
 
         <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
@@ -328,24 +417,21 @@
           >
           <div class="mt-2 flex justify-center gap-4 items-center">
             <span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
-            {#if game.config.settings.showCountdown && answerTimeRemaining > 0}
-              <span class="text-2xl font-bold text-red-600">{answerTimeRemaining}s</span>
-            {/if}
           </div>
         </div>
 
         <h2 class="text-xl font-bold mb-4 text-center">{question.question}</h2>
 
         {#if !hasSubmitted}
-          <p class="text-sm text-gray-600 mb-4 text-center">
-            {question.answerType === "multiple"
-              ? "Select all correct answers"
-              : "Select one answer"}
-          </p>
+          {#if question.answerType === "multiple"}
+            <p class="text-sm text-gray-500 mb-6 text-center border rounded p-2">You can select multiple answers.</p>
+          {:else}
+            <p class="text-sm text-gray-500 mb-6 text-center">Select one answer.</p>
+          {/if}
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div class="grid grid-cols-2 gap-4 mb-6">
             {#each question.answers as answer, i}
-              {@const color = answerColors[i % answerColors.length]}
+              {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
               <button
                 onclick={() => toggleAnswer(i)}
                 class="p-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {selectedAnswers.includes(
@@ -360,7 +446,7 @@
                     <span class="text-left">{answer.text}</span>
                   </div>
                   {#if selectedAnswers.includes(i)}
-                    <span class="text-2xl">✓</span>
+                    <span class="text-2xl">✔️</span>
                   {/if}
                 </div>
               </button>
@@ -372,7 +458,11 @@
             disabled={selectedAnswers.length === 0}
             class="w-full bg-gradient-to-r from-green-600 to-green-500 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-green-700 hover:to-green-600 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all transform hover:scale-105 active:scale-95"
           >
-            Submit Answer
+            Submit answer
+
+            {#if game.config.settings.showCountdown && answerTimeRemaining > 0}
+              ({answerTimeRemaining}s)
+            {/if}
           </button>
         {:else}
           <div class="text-center py-12">
@@ -381,6 +471,79 @@
             <p class="text-gray-600 mt-2">Waiting for other players...</p>
           </div>
         {/if}
+      </div>
+    {:else if game?.phase === "answer-review"}
+      {@const question = game.config.questions[game.currentQuestionIndex]}
+      <div class="bg-white rounded-lg shadow-xl p-8">
+        <div class="mb-4 text-center">
+          <span class="text-sm text-gray-600"
+            >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
+          >
+          <div class="mt-2">
+            <span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
+          </div>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
+
+        <!-- Answer distribution chart -->
+        <div class="mb-6 p-4 bg-gray-50 rounded">
+          <h3 class="text-md font-bold mb-3 text-center text-gray-700">Answer Distribution</h3>
+          <div class="flex items-end gap-2 h-32 justify-center">
+            {#each question.answers as _, i}
+              {@const value = counts[i] || 0}
+              <div class="flex-1 max-w-[60px] text-center">
+                <div
+                  class="mx-auto bg-purple-600 rounded-t"
+                  style="height: {Math.round((value / max) * 100)}%; width: 100%; min-height: 4px;"
+                ></div>
+                <div class="mt-1 text-xs font-bold">{String.fromCharCode(65 + i)}</div>
+                <div class="text-xs text-gray-600">{value}</div>
+              </div>
+            {/each}
+          </div>
+        </div>
+
+        <!-- Correct answers highlighted -->
+        <div class="grid grid-cols-2 gap-4">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            {@const wasSelected = currentQuestionSelections.includes(i)}
+            {@const isCorrectAnswer = answer.correct}
+            {@const isMultipleChoice = question.answerType === "multiple"}
+            {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
+
+            <div
+              class="p-4 rounded-lg border-2 {isCorrectAnswer
+                ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
+                : wasSelected && !isCorrectAnswer
+                  ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
+                  : isMissedCorrect
+                    ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
+                    : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">{color.symbol}</span>
+                <div class="text-left font-bold flex-1">
+                  {String.fromCharCode(65 + i)}. {answer.text}
+                </div>
+                {#if isCorrectAnswer && wasSelected}
+                  <span class="text-2xl text-green-600">✅</span>
+                {:else if isCorrectAnswer && !wasSelected && isMultipleChoice}
+                  <span class="text-2xl text-orange-600">⚠️</span>
+                {:else if wasSelected && !isCorrectAnswer}
+                  <span class="text-2xl text-red-600">❌</span>
+                {:else if isCorrectAnswer}
+                  <span class="text-2xl">✅</span>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="text-center mt-6 py-4">
+          <p class="text-gray-600">Waiting for host to continue...</p>
+        </div>
       </div>
     {:else if game?.phase === "scoreboard"}
       <div class="bg-white rounded-lg shadow-xl p-8">

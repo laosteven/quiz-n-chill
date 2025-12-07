@@ -2,6 +2,7 @@
   import { page } from "$app/stores";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, LeaderboardEntry } from "$lib/types";
   import QRCode from "qrcode";
   import { io, type Socket } from "socket.io-client";
@@ -21,6 +22,21 @@
   let readInterval: NodeJS.Timeout | undefined;
   let answerInterval: NodeJS.Timeout | undefined;
 
+  // Calculate answer counts for current question in answer-review phase
+  let answerCounts = $derived.by(() => {
+    if (!game || game.currentQuestionIndex < 0) return {};
+    const counts: Record<number, number> = {};
+    const qIndex = game.currentQuestionIndex;
+    Object.values(game.players).forEach((p) => {
+      const ans = p.answers[qIndex] || [];
+      ans.forEach((i) => {
+        counts[i] = (counts[i] || 0) + 1;
+      });
+    });
+    return counts;
+  });
+  let maxCount = $derived(Math.max(...Object.values(answerCounts), 1));
+
   const gameId = $page.params.gameId;
   const joinUrl = typeof window !== "undefined" ? `${window.location.origin}/play/${gameId}` : "";
 
@@ -35,6 +51,28 @@
     if (response.ok) {
       const data = await response.json();
       game = data.game;
+
+      // If we're in leaderboard phase on refresh, populate the leaderboard
+      if (game?.phase === "scoreboard" || game?.phase === "leaderboard") {
+        console.log("Populating leaderboard on refresh, players:", game.players);
+        if (game.players && Object.keys(game.players).length > 0) {
+          leaderboard = Object.values(game.players)
+            .map((player) => ({
+              playerId: player.id,
+              playerName: player.name,
+              score: player.score,
+              rank: 0, // Will be set below
+            }))
+            .sort((a, b) => b.score - a.score)
+            .map((entry, index) => ({
+              ...entry,
+              rank: index + 1,
+            }));
+          console.log("Leaderboard populated:", leaderboard);
+        } else {
+          console.warn("No players found in game state");
+        }
+      }
     }
 
     // Connect to Socket.IO
@@ -58,11 +96,17 @@
     });
 
     socket.on("game:state-update", (updatedGame: GameState) => {
+      const prevPhase = game?.phase;
       game = updatedGame;
+      // Only start timers / reset counts on phase transitions
       if (game.phase === "question-reading") {
-        startReadTimer();
+        if (prevPhase !== "question-reading") startReadTimer();
       } else if (game.phase === "question-answering") {
-        startAnswerTimer();
+        if (prevPhase !== "question-answering") {
+          // reset answered count only when entering the answering phase
+          answeredCount = 0;
+          startAnswerTimer();
+        }
       } else {
         clearTimers();
       }
@@ -195,7 +239,7 @@
               <img
                 src={qrCodeUrl}
                 alt="QR Code"
-                class="border-4 border-gray-200 rounded-lg mx-auto w-full"
+                class="border-4 border-gray-200 rounded-lg mx-auto w-[300px] h-[300px]"
               />
             {/if}
             <p class="my-2 text-md text-center font-mono bg-gray-100 p-3 rounded break-all">
@@ -205,7 +249,7 @@
 
           <div class="flex-1">
             <p class="font-semibold mb-2">Players ({playerCount}):</p>
-            <ScrollArea class="space-y-2 h-[410px]">
+            <ScrollArea class="space-y-2 h-[360px]">
               {#each Object.values(game.players) as player}
                 <div class="bg-gray-100 p-3 rounded flex items-center justify-between mb-2">
                   <div class="flex items-center gap-3">
@@ -231,13 +275,13 @@
                       onclick={() => savePlayerName(player.id)}
                       class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-1"
                     >
-                      ✓
+                      ✅
                     </button>
                     <button
                       onclick={cancelEditing}
                       class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
                     >
-                      ✕
+                      ❌
                     </button>
                   {:else}
                     <div class="flex items-center gap-2">
@@ -270,32 +314,18 @@
       </div>
     {/if}
 
-    {#if game?.phase === "question-reading" || game?.phase === "question-answering"}
+    <!-- Question Reading Phase -->
+    {#if game?.phase === "question-reading"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
         <div class="mb-4 flex justify-between items-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
-          <div class="flex gap-4 items-center">
-            {#if game.phase === "question-answering"}
-              <span class="text-sm font-semibold text-blue-600">
-                {answeredCount} / {playerCount} answered
-              </span>
-            {/if}
-            {#if game.config.settings.showCountdown}
-              <span class="text-lg font-bold text-purple-600">
-                {game.phase === "question-reading" ? readTimeRemaining : answerTimeRemaining}s
-              </span>
-            {/if}
-          </div>
+          {#if game.config.settings.showCountdown}
+            <span class="text-lg font-bold text-purple-600">{readTimeRemaining}s</span>
+          {/if}
         </div>
-
-        {#if question.backgroundUrl}
-          <div class="absolute inset-0 opacity-20">
-            <img src={question.backgroundUrl} alt="Background" class="w-full h-full object-cover" />
-          </div>
-        {/if}
 
         <h2
           class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
@@ -324,67 +354,144 @@
           </div>
         {/if}
 
-        {#if game.phase === "question-reading"}
-          <div class="text-center py-8">
-            <button
-              onclick={startAnswering}
-              class="bg-blue-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-blue-700"
-            >
-              Show answers now
-            </button>
-          </div>
-        {:else}
-          <div class="grid grid-cols-2 gap-4 mb-6">
-            {#each question.answers as answer, i}
-              <div class="bg-gray-100 p-4 rounded-lg border-2 border-gray-300">
-                <span class="font-bold text-2xl mr-2">{String.fromCharCode(65 + i)}.</span>
-                <span class="text-2xl">{answer.text}</span>
-              </div>
-            {/each}
-          </div>
-
-          <div class="flex gap-4">
-            <button
-              onclick={showScoreboard}
-              class="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-orange-700"
-            >
-              Show results
-            </button>
-          </div>
-        {/if}
+        <div class="text-center py-8">
+          <button
+            onclick={startAnswering}
+            class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
+          >
+            Start answering
+          </button>
+        </div>
       </div>
     {/if}
 
-    {#if game?.phase === "scoreboard"}
+    <!-- Question Answering Phase -->
+    {#if game?.phase === "question-answering"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
-        <h2 class="text-2xl font-bold mb-6">Question</h2>
-
-        <div class="mb-6">
-          <h2
-            class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+        <div class="mb-4 flex justify-between items-center">
+          <span class="text-sm text-gray-600"
+            >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
-            {question.question}
-          </h2>
-          <p class="text-lg"><strong>Correct answer(s):</strong></p>
-          <div class="grid grid-cols-2 gap-4 mt-2">
-            {#each question.answers as answer, i}
-              <div
-                class="p-3 rounded-lg {answer.correct
-                  ? 'bg-green-100 border-2 border-green-500'
-                  : 'bg-gray-100'}"
-              >
-                <span class="font-bold mr-2">{String.fromCharCode(65 + i)}.</span>
-                {answer.text}
+          <div class="flex gap-4 items-center">
+            <span class="text-sm font-semibold text-blue-600">
+              {answeredCount} / {playerCount} answered
+            </span>
+          </div>
+        </div>
+
+        <h2
+          class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+        >
+          {question.question}
+        </h2>
+
+        {#if question.mediaType === "image" && question.mediaUrl}
+          <img
+            src={question.mediaUrl}
+            alt="Question media"
+            class="max-w-md mx-auto rounded-lg mb-6"
+          />
+        {/if}
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            <div
+              class="flex align-center justify-center p-4 rounded-lg h-[20vh] {color.bg} {color.text}"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">{color.symbol}</span>
+                <div class="font-bold text-3xl">
+                  {String.fromCharCode(65 + i)}. {answer.text}
+                </div>
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <div class="text-center">
+          <button
+            onclick={() => socket.emit("host:reveal-answers", gameId)}
+            class="bg-orange-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-orange-700"
+          >
+            Reveal answers
+
+            {#if game.config.settings.showCountdown && answerTimeRemaining > 0}
+              ({answerTimeRemaining}s)
+            {/if}
+          </button>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Answer Review Phase -->
+    {#if game?.phase === "answer-review"}
+      {@const question = game.config.questions[game.currentQuestionIndex]}
+      <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
+        <div class="mb-4">
+          <span class="text-sm text-gray-600"
+            >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
+          >
+        </div>
+
+        <h2 class="text-3xl font-bold my-8 text-center border p-12 rounded-lg bg-white">
+          {question.question}
+        </h2>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            <div
+              class="p-4 rounded-lg border-2 {answer.correct
+                ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
+                : `${color.bg} ${color.text} border-gray-300 opacity-30`}"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">{color.symbol}</span>
+                <div class="font-bold text-lg">
+                  {String.fromCharCode(65 + i)}. {answer.text}
+                </div>
                 {#if answer.correct}
-                  <span class="ml-2 text-green-600">✓</span>
+                  <span class="text-2xl ml-auto">✅</span>
                 {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <!-- Answer distribution chart -->
+        <div class="mb-6 p-4 bg-gray-50 rounded">
+          <h3 class="text-lg font-bold mb-4 text-center">Answer Distribution</h3>
+          <div class="flex items-end gap-4 h-40 justify-center">
+            {#each question.answers as _, i}
+              {@const value = answerCounts[i] || 0}
+              <div class="flex-1 max-w-[80px] text-center">
+                <div
+                  class="mx-auto bg-purple-600 rounded-t"
+                  style="height: {Math.round(
+                    (value / maxCount) * 100
+                  )}%; width: 100%; min-height: 4px;"
+                ></div>
+                <div class="mt-2 text-sm font-bold">{String.fromCharCode(65 + i)}</div>
+                <div class="text-xs text-gray-600">{value} votes</div>
               </div>
             {/each}
           </div>
         </div>
 
-        <h3 class="text-xl font-bold mb-4">Top scores</h3>
+        <button
+          onclick={showScoreboard}
+          class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
+        >
+          Show scoreboard
+        </button>
+      </div>
+    {/if}
+
+    {#if game?.phase === "scoreboard"}
+      <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
+        <h3 class="text-xl font-bold mb-4">Leaderboard</h3>
         <div class="space-y-2 mb-6">
           {#each leaderboard.slice(0, 5) as entry}
             <div class="flex items-center justify-between bg-gray-100 p-3 rounded">

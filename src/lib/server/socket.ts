@@ -8,7 +8,24 @@ function broadcastGameState(gameId: string) {
   if (!io) return;
   const game = gameManager.getGame(gameId);
   if (game) {
-    io.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit("game:state-update", game);
+    // Send full state to host, but sanitize for players to avoid leaking correct answers
+    const sanitizeForPlayers = (g: any, includeCorrect = false) => {
+      const copy = JSON.parse(JSON.stringify(g));
+      if (!includeCorrect && copy.config && Array.isArray(copy.config.questions)) {
+        copy.config.questions.forEach((q: any) => {
+          if (q.answers && Array.isArray(q.answers)) {
+            q.answers = q.answers.map((a: any) => ({ text: a.text }));
+          }
+        });
+      }
+      return copy;
+    };
+
+    // During answer-review and leaderboard phases, players need to see correct answers
+    const shouldIncludeCorrect = game.phase === "answer-review" || game.phase === "leaderboard";
+
+    io.to(`game:${gameId}:host`).emit("game:state-update", game);
+    io.to(`game:${gameId}:players`).emit("game:state-update", sanitizeForPlayers(game, shouldIncludeCorrect));
   }
 }
 
@@ -35,9 +52,11 @@ export function initSocketServer(httpServer: HTTPServer) {
 
     // Player joins with duplicate checking
     socket.on("player:join", ({ gameId, playerName }: { gameId: string; playerName: string }) => {
+      console.log(`Player join attempt: ${playerName} -> ${gameId}`);
       const can = gameManager.canJoin(gameId, playerName);
       if (!can.ok) {
-        socket.emit("error", { message: can.reason || "Cannot join" });
+        console.log(`Player join rejected: ${playerName} -> ${gameId} (${can.reason})`);
+        socket.emit("player:join-failed", { message: can.reason || "Cannot join" });
         return;
       }
 
@@ -51,7 +70,8 @@ export function initSocketServer(httpServer: HTTPServer) {
         io!.to(`game:${gameId}:host`).emit("player:added", result.player);
         broadcastGameState(gameId);
       } else {
-        socket.emit("error", { message: "Failed to add player" });
+        console.log(`Failed to add player ${playerName} to game ${gameId}`);
+        socket.emit("player:join-failed", { message: "Failed to add player" });
       }
     });
 
@@ -103,7 +123,17 @@ export function initSocketServer(httpServer: HTTPServer) {
     socket.on("host:start-game", (gameId: string) => {
       if (gameManager.startGame(gameId)) {
         const game = gameManager.getGame(gameId);
-        io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit("game:started", game);
+        // Send full to host, sanitized to players
+        const sanitizeForPlayers = (g: any) => {
+          const copy = JSON.parse(JSON.stringify(g));
+          copy.config.questions.forEach((q: any) => {
+            q.answers = q.answers.map((a: any) => ({ text: a.text }));
+          });
+          return copy;
+        };
+
+        io!.to(`game:${gameId}:host`).emit("game:started", game);
+        io!.to(`game:${gameId}:players`).emit("game:started", sanitizeForPlayers(game));
 
         const question = game?.config.questions[0];
         if (question) {
@@ -113,6 +143,14 @@ export function initSocketServer(httpServer: HTTPServer) {
             }
           }, question.readTime * 1000);
         }
+      }
+    });
+
+    // Host manually reveals answers (moves to answer-review phase)
+    socket.on("host:reveal-answers", (gameId: string) => {
+      console.log(`host:reveal-answers received from ${socket.id} for game ${gameId}`);
+      if (gameManager.revealAnswers(gameId)) {
+        broadcastGameState(gameId);
       }
     });
 
@@ -127,18 +165,24 @@ export function initSocketServer(httpServer: HTTPServer) {
       const playerId = socket.data.playerId;
 
       if (gameId && playerId) {
-        if (gameManager.submitAnswer(gameId, playerId, answerIndices)) {
+        const ok = gameManager.submitAnswer(gameId, playerId, answerIndices);
+        if (ok) {
           socket.emit("answer:submitted", { answerIndices });
 
           const answeredCount = gameManager.getAnsweredCount(gameId);
           const game = gameManager.getGame(gameId);
           const totalPlayers = game ? Object.keys(game.players).length : 0;
 
+          console.log(`player:submit-answer from ${playerId} in ${gameId}: answeredCount=${answeredCount}/${totalPlayers}`);
+
           io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit("player:answered", {
             playerId,
             answeredCount,
             totalPlayers,
           });
+
+          // Broadcast updated game state (sanitized for players)
+          broadcastGameState(gameId);
 
           // Auto-proceed if enabled and all answered
           if (
@@ -147,17 +191,14 @@ export function initSocketServer(httpServer: HTTPServer) {
             answeredCount === totalPlayers
           ) {
             setTimeout(() => {
-              gameManager.calculateScores(gameId);
-              if (gameManager.showScoreboard(gameId)) {
-                const updatedGame = gameManager.getGame(gameId);
-                const leaderboard = gameManager.getLeaderboard(gameId);
-                io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit("game:scoreboard", {
-                  game: updatedGame,
-                  leaderboard,
-                });
+              if (gameManager.revealAnswers(gameId)) {
+                broadcastGameState(gameId);
+                console.log(`auto-proceed: moved to answer-review phase for game ${gameId}`);
               }
             }, 1000);
           }
+        } else {
+          console.log(`submitAnswer failed for player ${playerId} in game ${gameId} (phase may be wrong or player missing)`);
         }
       }
     });

@@ -1,4 +1,4 @@
-import type { GameState, GameConfig, Player, LeaderboardEntry } from "$lib/types";
+import type { GameConfig, GameState, LeaderboardEntry, Player } from "$lib/types";
 import { nanoid } from "nanoid";
 import { PlayerService } from "./services/player.service";
 
@@ -135,6 +135,16 @@ export class GameManager {
     return true;
   }
 
+  revealAnswers(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game || (game.phase !== "question-answering" && game.phase !== "question-reading")) {
+      return false;
+    }
+
+    game.phase = "answer-review";
+    return true;
+  }
+
   submitAnswer(gameId: string, playerId: string, answerIndices: number[]): boolean {
     const game = this.games.get(gameId);
     if (!game || game.phase !== "question-answering") {
@@ -147,6 +157,13 @@ export class GameManager {
     }
 
     player.answers[game.currentQuestionIndex] = answerIndices;
+    
+    // Track when the player submitted their answer
+    if (!player.answerTimes) {
+      player.answerTimes = {};
+    }
+    player.answerTimes[game.currentQuestionIndex] = Date.now();
+    
     return true;
   }
 
@@ -249,20 +266,45 @@ export class GameManager {
     Object.values(game.players).forEach((player) => {
       const playerAnswers = player.answers[game.currentQuestionIndex] || [];
 
-      // Check if answer is correct
-      const isCorrect =
-        playerAnswers.length === correctIndices.length &&
-        playerAnswers.every((i) => correctIndices.includes(i));
+      let points = 0;
 
-      if (isCorrect) {
-        let points = game.config.settings.pointsPerCorrectAnswer;
+      if (question.answerType === "single") {
+        // Single choice: all or nothing
+        const isCorrect =
+          playerAnswers.length === correctIndices.length &&
+          playerAnswers.every((i) => correctIndices.includes(i));
 
-        // Time bonus
+        if (isCorrect) {
+          points = game.config.settings.pointsPerCorrectAnswer;
+        }
+      } else {
+        // Multiple choice: partial scoring
+        const correctSelected = playerAnswers.filter((i) => correctIndices.includes(i)).length;
+        const incorrectSelected = playerAnswers.filter((i) => !correctIndices.includes(i)).length;
+        const totalCorrect = correctIndices.length;
+        
+        if (correctSelected > 0) {
+          // Base points: proportion of correct answers selected
+          const basePoints = (correctSelected / totalCorrect) * game.config.settings.pointsPerCorrectAnswer;
+          
+          // Penalty for incorrect selections (reduce points by percentage)
+          const penaltyFactor = Math.max(0, 1 - (incorrectSelected * 0.25)); // 25% penalty per wrong answer
+          
+          points = Math.floor(basePoints * penaltyFactor);
+        }
+      }
+
+      if (points > 0) {
+        // Time bonus (only applied if player gets some points)
         if (game.config.settings.timeBonus && game.answerStartTime) {
-          const timeElapsed = (Date.now() - game.answerStartTime) / 1000;
-          const timeRemaining = question.timeLimit - timeElapsed;
-          const timeBonus = Math.max(0, Math.floor((timeRemaining / question.timeLimit) * 500));
-          points += timeBonus;
+          const answerTime = player.answerTimes?.[game.currentQuestionIndex];
+          if (answerTime && answerTime >= game.answerStartTime) {
+            const timeElapsed = (answerTime - game.answerStartTime) / 1000;
+            const timeRemaining = Math.max(0, question.timeLimit - timeElapsed);
+            const timeBonus = Math.max(0, Math.floor((timeRemaining / question.timeLimit) * 500));
+            points += timeBonus;
+          }
+          // If no answer time recorded, no time bonus (shouldn't happen with proper tracking)
         }
 
         player.score += points;
@@ -276,6 +318,23 @@ export class GameManager {
 
     game.phase = "scoreboard";
     return true;
+  }
+
+  getAnswerCounts(gameId: string): Record<number, number> {
+    const game = this.games.get(gameId);
+    if (!game || game.currentQuestionIndex < 0) {
+      return {};
+    }
+
+    const counts: Record<number, number> = {};
+    Object.values(game.players).forEach((p) => {
+      const ans = p.answers[game.currentQuestionIndex] || [];
+      ans.forEach((i) => {
+        counts[i] = (counts[i] || 0) + 1;
+      });
+    });
+
+    return counts;
   }
 
   nextQuestion(gameId: string): boolean {
