@@ -1,18 +1,22 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import GameMenu from "$lib/components/game/GameMenu.svelte";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import TopProgress from "$lib/components/ui/top-progress.svelte";
+  import { useQRCode } from "$lib/composables/useQRCode.svelte";
   import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, LeaderboardEntry } from "$lib/types";
-  import QRCode from "qrcode";
+  import Check from "@lucide/svelte/icons/check";
+  import X from "@lucide/svelte/icons/x";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
   import { toast } from "svelte-sonner";
 
+  const qrCode = useQRCode();
   let socket: Socket;
   let game = $state<GameState | null>(null);
   let leaderboard = $state<LeaderboardEntry[]>([]);
-  let qrCodeUrl = $state("");
   let playerCount = $derived(game ? Object.keys(game.players).length : 0);
   let answeredCount = $state(0);
   let editingPlayerId = $state<string | null>(null);
@@ -38,13 +42,10 @@
   let maxCount = $derived(Math.max(...Object.values(answerCounts), 1));
 
   const gameId = $page.params.gameId;
-  const joinUrl = typeof window !== "undefined" ? `${window.location.origin}/play/${gameId}` : "";
 
   onMount(async () => {
     // Generate QR code
-    if (joinUrl) {
-      qrCodeUrl = await QRCode.toDataURL(joinUrl, { width: 300 });
-    }
+    qrCode.generate();
 
     // Fetch initial game state
     const response = await fetch(`/api/games/${gameId}`);
@@ -99,7 +100,9 @@
       const prevPhase = game?.phase;
       game = updatedGame;
       // Only start timers / reset counts on phase transitions
-      if (game.phase === "question-reading") {
+      if (game.phase === "lobby") {
+        qrCode.generate();
+      } else if (game.phase === "question-reading") {
         if (prevPhase !== "question-reading") startReadTimer();
       } else if (game.phase === "question-answering") {
         if (prevPhase !== "question-answering") {
@@ -223,6 +226,8 @@
 <Toaster position="top-center" />
 
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
+  <GameMenu />
+
   <div class="max-w-6xl mx-auto">
     <h1 class="text-4xl font-bold text-white mb-8 text-center">
       {game?.config.name || "Quiz Game"}
@@ -235,20 +240,20 @@
         <div class="flex gap-8 items-start">
           <div class="flex-1">
             <p class="font-semibold mb-2">Scan QR code to join:</p>
-            {#if qrCodeUrl}
+            {#if qrCode.qrCodeDataUrl}
               <img
-                src={qrCodeUrl}
-                alt="QR Code"
-                class="border-4 border-gray-200 rounded-lg mx-auto w-[300px] h-[300px]"
+                src={qrCode.qrCodeDataUrl}
+                alt="QR Code to join game"
+                class="border-4 border-gray-200 rounded-lg mx-auto my-4 w-[300px] h-[300px]"
               />
             {/if}
-            <p class="my-2 text-md text-center font-mono bg-gray-100 p-3 rounded break-all">
-              {joinUrl}
+            <p class="text-md text-center font-mono p-1 rounded break-all">
+              {qrCode.joinUrl}
             </p>
           </div>
 
           <div class="flex-1">
-            <p class="font-semibold mb-2">Players ({playerCount}):</p>
+            <p class="font-semibold mb-4">Players ({playerCount}):</p>
             <ScrollArea class="space-y-2 h-[360px]">
               {#each Object.values(game.players) as player}
                 <div class="bg-gray-100 p-3 rounded flex items-center justify-between mb-2">
@@ -275,13 +280,13 @@
                       onclick={() => savePlayerName(player.id)}
                       class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 mr-1"
                     >
-                      ✅
+                      <Check />
                     </button>
                     <button
                       onclick={cancelEditing}
                       class="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
                     >
-                      ❌
+                      <X />
                     </button>
                   {:else}
                     <div class="flex items-center gap-2">
@@ -317,6 +322,12 @@
     <!-- Question Reading Phase -->
     {#if game?.phase === "question-reading"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
+      <TopProgress
+        total={question.readTime}
+        remaining={readTimeRemaining}
+        show={game?.config.settings.showCountdown && readTimeRemaining > 0}
+        colorClass="bg-purple-600"
+      />
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
         <div class="mb-4 flex justify-between items-center">
           <span class="text-sm text-gray-600"
@@ -328,7 +339,7 @@
         </div>
 
         <h2
-          class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+          class="text-3xl font-bold my-8 relative text-center z-10 border border-gray-300 p-12 rounded-lg bg-gray-50"
         >
           {question.question}
         </h2>
@@ -368,6 +379,12 @@
     <!-- Question Answering Phase -->
     {#if game?.phase === "question-answering"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
+      <TopProgress
+        total={question.timeLimit}
+        remaining={answerTimeRemaining}
+        show={game?.config.settings.showCountdown && answerTimeRemaining > 0}
+        colorClass="bg-green-400"
+      />
       <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
         <div class="mb-4 flex justify-between items-center">
           <span class="text-sm text-gray-600"
@@ -381,7 +398,7 @@
         </div>
 
         <h2
-          class="text-3xl font-bold my-8 relative text-center z-10 border p-12 rounded-lg bg-white"
+          class="text-3xl font-bold my-8 relative text-center z-10 border border-gray-300 p-12 rounded-lg bg-gray-50"
         >
           {question.question}
         </h2>

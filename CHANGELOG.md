@@ -1,18 +1,16 @@
 ## [1.0.2](https://github.com/laosteven/quiz-n-chill/compare/v1.0.1...v1.0.2) (2025-12-07)
 
-
 ### Bug Fixes
 
-* Docker setup for production ([afa3fed](https://github.com/laosteven/quiz-n-chill/commit/afa3fed41448d01f1a206fcb241aa946737f299e))
-* game phases ([5bd5726](https://github.com/laosteven/quiz-n-chill/commit/5bd57260bceac6eac776267b018c2db26a98eb12))
-* improve UI and accessibility ([8f8897c](https://github.com/laosteven/quiz-n-chill/commit/8f8897c54c80794a9b2690184a216b9c39e4c4d0))
+- Docker setup for production ([afa3fed](https://github.com/laosteven/quiz-n-chill/commit/afa3fed41448d01f1a206fcb241aa946737f299e))
+- game phases ([5bd5726](https://github.com/laosteven/quiz-n-chill/commit/5bd57260bceac6eac776267b018c2db26a98eb12))
+- improve UI and accessibility ([8f8897c](https://github.com/laosteven/quiz-n-chill/commit/8f8897c54c80794a9b2690184a216b9c39e4c4d0))
 
 ## [1.0.1](https://github.com/laosteven/quiz-n-chill/compare/v1.0.0...v1.0.1) (2025-12-07)
 
-
 ### Bug Fixes
 
-* docker github action ([77834b7](https://github.com/laosteven/quiz-n-chill/commit/77834b7605b58c3bd6c5ebd5c4313c5885453138))
+- docker github action ([77834b7](https://github.com/laosteven/quiz-n-chill/commit/77834b7605b58c3bd6c5ebd5c4313c5885453138))
 
 # 1.0.0 (2025-12-07)
 

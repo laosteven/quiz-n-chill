@@ -1,7 +1,10 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import GameMenu from "$lib/components/game/GameMenu.svelte";
+  import TopProgress from "$lib/components/ui/top-progress.svelte";
   import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, Player } from "$lib/types";
+  import Info from "@lucide/svelte/icons/info";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
 
@@ -313,6 +316,8 @@
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-pink-500 to-purple-600 p-4">
+  <GameMenu />
+
   <div class="max-w-2xl mx-auto">
     {#if !joined}
       <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
@@ -334,7 +339,7 @@
             disabled={!playerName.trim()}
             class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg font-bold text-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Join Game
+            Join game
           </button>
 
           <p class="text-muted-foreground mt-4 text-sm text-center">
@@ -383,7 +388,13 @@
       </div>
     {:else if game?.phase === "question-reading"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
-      <div class="bg-white rounded-lg shadow-xl p-8">
+      <TopProgress
+        total={question.readTime}
+        remaining={readTimeRemaining}
+        show={game?.config.settings.showCountdown && readTimeRemaining > 0}
+        colorClass="bg-purple-600"
+      />
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
@@ -410,13 +421,19 @@
       </div>
     {:else if game?.phase === "question-answering"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
-      <div class="bg-white rounded-lg shadow-xl p-8">
+      <TopProgress
+        total={question.timeLimit}
+        remaining={answerTimeRemaining}
+        show={game?.config.settings.showCountdown && answerTimeRemaining > 0 && !hasSubmitted}
+        colorClass="bg-green-400"
+      />
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
           <div class="mt-2 flex justify-center gap-4 items-center">
-            <span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
+            <span class="text-sm font-semibold text-purple-600">Your score: {playerScore}</span>
           </div>
         </div>
 
@@ -424,9 +441,11 @@
 
         {#if !hasSubmitted}
           {#if question.answerType === "multiple"}
-            <p class="text-sm text-gray-500 mb-6 text-center border rounded p-2">You can select multiple answers.</p>
-          {:else}
-            <p class="text-sm text-gray-500 mb-6 text-center">Select one answer.</p>
+            <p
+              class="flex items-center my-6 p-4 gap-2 justify-center bg-blue-300/30 text-sm text-center border rounded text-blue-700 font-medium"
+            >
+              <Info size={16} /> Multiple answers allowed.
+            </p>
           {/if}
 
           <div class="grid grid-cols-2 gap-4 mb-6">
@@ -480,7 +499,7 @@
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
           <div class="mt-2">
-            <span class="text-sm font-semibold text-purple-600">Your Score: {playerScore}</span>
+            <span class="text-sm font-semibold text-purple-600">Your score: {playerScore}</span>
           </div>
         </div>
 
@@ -546,21 +565,23 @@
         </div>
       </div>
     {:else if game?.phase === "scoreboard"}
-      <div class="bg-white rounded-lg shadow-xl p-8">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
         <h2 class="text-2xl font-bold mb-6 text-center">Results</h2>
 
-        <div class="text-center mb-6">
+        <div class="text-center">
           <div class="text-5xl font-bold text-purple-600 mb-2">{playerScore}</div>
-          <p class="text-gray-600">Your Score</p>
-          <p class="text-lg font-bold my-4 border p-3 rounded">Rank: #{playerRank}</p>
+          <p class="text-gray-600">Your score</p>
+          <p class="text-lg font-bold my-8 border border-gray-200 p-3 rounded">
+            Rank: #{playerRank}
+          </p>
         </div>
 
-        <div class="text-center py-4">
+        <div class="text-center">
           <p class="text-gray-600">Get ready for the next question...</p>
         </div>
       </div>
     {:else if game?.phase === "leaderboard"}
-      <div class="bg-white rounded-lg shadow-xl p-8">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
         <h2 class="text-2xl font-bold mb-6 text-center">Final results</h2>
 
         <div class="text-center mb-6">
@@ -585,7 +606,7 @@
         </div>
       </div>
     {:else if game?.phase === "finished"}
-      <div class="bg-white rounded-lg shadow-xl p-8 text-center">
+      <div class="bg-white rounded-lg shadow-xl p-8 text-center mt-20">
         <h2 class="text-2xl font-bold mb-4">Game over!</h2>
         <p class="text-gray-600">Thanks for playing!</p>
       </div>

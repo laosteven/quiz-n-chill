@@ -55,7 +55,7 @@ export interface GameState {
   players: Record<string, Player>;
   questionStartTime?: number;
   answerStartTime?: number;
-  choicesShown?: boolean; 
+  choicesShown?: boolean;
 }
 
 export interface LeaderboardEntry {

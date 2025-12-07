@@ -157,13 +157,13 @@ export class GameManager {
     }
 
     player.answers[game.currentQuestionIndex] = answerIndices;
-    
+
     // Track when the player submitted their answer
     if (!player.answerTimes) {
       player.answerTimes = {};
     }
     player.answerTimes[game.currentQuestionIndex] = Date.now();
-    
+
     return true;
   }
 
@@ -282,14 +282,15 @@ export class GameManager {
         const correctSelected = playerAnswers.filter((i) => correctIndices.includes(i)).length;
         const incorrectSelected = playerAnswers.filter((i) => !correctIndices.includes(i)).length;
         const totalCorrect = correctIndices.length;
-        
+
         if (correctSelected > 0) {
           // Base points: proportion of correct answers selected
-          const basePoints = (correctSelected / totalCorrect) * game.config.settings.pointsPerCorrectAnswer;
-          
+          const basePoints =
+            (correctSelected / totalCorrect) * game.config.settings.pointsPerCorrectAnswer;
+
           // Penalty for incorrect selections (reduce points by percentage)
-          const penaltyFactor = Math.max(0, 1 - (incorrectSelected * 0.25)); // 25% penalty per wrong answer
-          
+          const penaltyFactor = Math.max(0, 1 - incorrectSelected * 0.25); // 25% penalty per wrong answer
+
           points = Math.floor(basePoints * penaltyFactor);
         }
       }

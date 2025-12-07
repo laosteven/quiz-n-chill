@@ -25,7 +25,10 @@ function broadcastGameState(gameId: string) {
     const shouldIncludeCorrect = game.phase === "answer-review" || game.phase === "leaderboard";
 
     io.to(`game:${gameId}:host`).emit("game:state-update", game);
-    io.to(`game:${gameId}:players`).emit("game:state-update", sanitizeForPlayers(game, shouldIncludeCorrect));
+    io.to(`game:${gameId}:players`).emit(
+      "game:state-update",
+      sanitizeForPlayers(game, shouldIncludeCorrect)
+    );
   }
 }
 
@@ -173,7 +176,9 @@ export function initSocketServer(httpServer: HTTPServer) {
           const game = gameManager.getGame(gameId);
           const totalPlayers = game ? Object.keys(game.players).length : 0;
 
-          console.log(`player:submit-answer from ${playerId} in ${gameId}: answeredCount=${answeredCount}/${totalPlayers}`);
+          console.log(
+            `player:submit-answer from ${playerId} in ${gameId}: answeredCount=${answeredCount}/${totalPlayers}`
+          );
 
           io!.to(`game:${gameId}:host`).to(`game:${gameId}:players`).emit("player:answered", {
             playerId,
@@ -198,7 +203,9 @@ export function initSocketServer(httpServer: HTTPServer) {
             }, 1000);
           }
         } else {
-          console.log(`submitAnswer failed for player ${playerId} in game ${gameId} (phase may be wrong or player missing)`);
+          console.log(
+            `submitAnswer failed for player ${playerId} in game ${gameId} (phase may be wrong or player missing)`
+          );
         }
       }
     });

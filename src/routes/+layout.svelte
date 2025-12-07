@@ -12,4 +12,4 @@
   <meta name="description" content="Self-hosted quiz game" />
 </svelte:head>
 
-{@render children()}
+{@render children?.()}
