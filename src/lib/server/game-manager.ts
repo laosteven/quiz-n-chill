@@ -178,6 +178,16 @@ export class GameManager {
     ).length;
   }
 
+  showDistribution(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game || game.phase !== "answer-review") {
+      return false;
+    }
+
+    game.phase = "distribution";
+    return true;
+  }
+
   renamePlayer(
     gameId: string,
     playerId: string,

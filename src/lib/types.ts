@@ -49,6 +49,7 @@ export interface GameState {
     | "question-reading"
     | "question-answering"
     | "answer-review"
+    | "distribution"
     | "scoreboard"
     | "leaderboard"
     | "finished";

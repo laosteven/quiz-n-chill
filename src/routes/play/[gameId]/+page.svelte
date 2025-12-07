@@ -1,12 +1,15 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
+  import * as Chart from "$lib/components/ui/chart/index.js";
   import TopProgress from "$lib/components/ui/top-progress.svelte";
   import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, Player } from "$lib/types";
   import Info from "@lucide/svelte/icons/info";
+  import { Bar, BarChart, type ChartContextValue } from "layerchart";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
+  import { cubicInOut } from "svelte/easing";
 
   let socket: Socket;
   let game = $state<GameState | null>(null);
@@ -24,6 +27,44 @@
   let answerTimeRemaining = $state(0);
   let readInterval: NodeJS.Timeout | undefined;
   let answerInterval: NodeJS.Timeout | undefined;
+  let context = $state<ChartContextValue>();
+
+  // Calculate answer counts for current question
+  let counts = $derived.by(() => {
+    if (!game || game.currentQuestionIndex < 0) return {};
+    const result: Record<number, number> = {};
+    const qIndex = game.currentQuestionIndex;
+    Object.values(game.players).forEach((p) => {
+      const ans = p.answers[qIndex] || [];
+      ans.forEach((i) => {
+        result[i] = (result[i] || 0) + 1;
+      });
+    });
+    return result;
+  });
+
+  // Derived state to get the current question's player selections
+  let currentQuestionSelections = $derived.by(() => {
+    if (!game || game.currentQuestionIndex < 0) return [];
+    return playerSelections[game.currentQuestionIndex] || [];
+  });
+
+  let chartData = $derived.by(() => {
+    const q = game?.config.questions?.[game.currentQuestionIndex];
+    if (!q) return [];
+    const arr = [];
+    for (let i = 0; i < q.answers.length; i++) {
+      const letter = String.fromCharCode(65 + i);
+      const count = counts[i] || 0;
+      const color =
+        "var(--color-" + ANSWER_BUTTONS[i % ANSWER_BUTTONS.length].bg.replace("bg-", "") + ")";
+      arr.push({ letter, count, color });
+    }
+    return arr;
+  });
+
+  let lastScoreGain = $state<number | null>(null);
+  let prevScore = $state<number | null>(null);
 
   const gameId = $page.params.gameId;
 
@@ -57,6 +98,8 @@
 
     socket.on("game:state-update", (updatedGame: GameState) => {
       const prevPhase = game?.phase;
+      // capture previous player score before updating state
+      const prevPlayerScore = player ? player.score || 0 : 0;
       game = updatedGame;
       if (player && updatedGame.players[player.id]) {
         player = updatedGame.players[player.id];
@@ -112,16 +155,34 @@
         // Lock submission when in review phase and ensure we use local selections
         hasSubmitted = true;
         selectedAnswers = playerSelections[qIndex] || [];
+        // reset lastScoreGain while in review
+        lastScoreGain = null;
       } else {
         clearTimers();
+      }
+
+      // If the server moved to scoreboard, compute score gain for this player
+      if (prevPhase !== "scoreboard" && game.phase === "scoreboard") {
+        const newScore = player && game.players ? game.players[player.id]?.score || 0 : 0;
+        lastScoreGain = newScore - prevPlayerScore;
+        prevScore = prevPlayerScore;
       }
     });
 
     socket.on("game:scoreboard", ({ game: updatedGame }) => {
+      // capture previous player score before updating state
+      const prevPlayerScore = player ? player.score || 0 : 0;
       game = updatedGame;
       if (player && updatedGame.players[player.id]) {
         player = updatedGame.players[player.id];
       }
+
+      // compute score gain for this player
+      const newScore =
+        player && updatedGame.players ? updatedGame.players[player.id]?.score || 0 : 0;
+      lastScoreGain = newScore - prevPlayerScore;
+      prevScore = prevPlayerScore;
+
       clearTimers();
     });
 
@@ -177,6 +238,14 @@
     }
   });
 
+  function vibrate() {
+    if (typeof navigator !== "undefined" && (navigator as any).vibrate) {
+      try {
+        (navigator as any).vibrate(100);
+      } catch (e) {}
+    }
+  }
+
   function clearTimers() {
     if (readInterval) clearInterval(readInterval);
     if (answerInterval) clearInterval(answerInterval);
@@ -212,6 +281,8 @@
         clearInterval(answerInterval);
       }
     }, 1000);
+
+    vibrate();
   }
 
   function joinGame() {
@@ -262,6 +333,8 @@
       // Immediately flip to submitted state so UI shows waiting message
       hasSubmitted = true;
       socket.emit("player:submit-answer", { answerIndices: selectedAnswers });
+
+      vibrate();
     }
   }
 
@@ -284,21 +357,6 @@
     editingName = false;
   }
 
-  // Calculate answer counts for current question in answer-review phase
-  let counts = $derived.by(() => {
-    if (!game || game.currentQuestionIndex < 0) return {};
-    const result: Record<number, number> = {};
-    const qIndex = game.currentQuestionIndex;
-    Object.values(game.players).forEach((p) => {
-      const ans = p.answers[qIndex] || [];
-      ans.forEach((i) => {
-        result[i] = (result[i] || 0) + 1;
-      });
-    });
-    return result;
-  });
-  let max = $derived(Math.max(...Object.values(counts), 1));
-
   let playerScore = $derived(game && player ? game.players[player.id]?.score || 0 : 0);
   let playerRank = $derived.by(() => {
     if (!game || !player) return 0;
@@ -306,12 +364,6 @@
       .map((p) => p.score)
       .sort((a, b) => b - a);
     return scores.indexOf(playerScore) + 1;
-  });
-
-  // Derived state to get the current question's player selections
-  let currentQuestionSelections = $derived.by(() => {
-    if (!game || game.currentQuestionIndex < 0) return [];
-    return playerSelections[game.currentQuestionIndex] || [];
   });
 </script>
 
@@ -505,21 +557,58 @@
 
         <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
 
-        <!-- Answer distribution chart -->
-        <div class="mb-6 p-4 bg-gray-50 rounded">
-          <h3 class="text-md font-bold mb-3 text-center text-gray-700">Answer Distribution</h3>
-          <div class="flex items-end gap-2 h-32 justify-center">
-            {#each question.answers as _, i}
-              {@const value = counts[i] || 0}
-              <div class="flex-1 max-w-[60px] text-center">
-                <div
-                  class="mx-auto bg-purple-600 rounded-t"
-                  style="height: {Math.round((value / max) * 100)}%; width: 100%; min-height: 4px;"
-                ></div>
-                <div class="mt-1 text-xs font-bold">{String.fromCharCode(65 + i)}</div>
-                <div class="text-xs text-gray-600">{value}</div>
+        <!-- Correct answers highlighted -->
+        <div class="grid grid-cols-2 gap-4">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            {@const wasSelected = currentQuestionSelections.includes(i)}
+            {@const isCorrectAnswer = answer.correct}
+            {@const isMultipleChoice = question.answerType === "multiple"}
+            {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
+
+            <div
+              class="p-4 rounded-lg border-2 {isCorrectAnswer
+                ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
+                : wasSelected && !isCorrectAnswer
+                  ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
+                  : isMissedCorrect
+                    ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
+                    : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">{color.symbol}</span>
+                <div class="text-left font-bold flex-1">
+                  {String.fromCharCode(65 + i)}. {answer.text}
+                </div>
+                {#if isCorrectAnswer}
+                  {#if wasSelected}
+                    <span class="text-2xl text-green-600">✅</span>
+                  {:else if isMultipleChoice}
+                    <span class="text-2xl text-orange-600">⚠️</span>
+                  {:else}
+                    <span class="text-2xl text-green-600">✅</span>
+                  {/if}
+                {:else if wasSelected}
+                  <span class="text-2xl text-red-600">❌</span>
+                {/if}
               </div>
-            {/each}
+            </div>
+          {/each}
+        </div>
+
+        <div class="text-center mt-6 py-4">
+          <p class="text-gray-600">Waiting for host to continue...</p>
+        </div>
+      </div>
+    {:else if game?.phase === "distribution"}
+      {@const question = game.config.questions[game.currentQuestionIndex]}
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+        <div class="mb-4 text-center">
+          <span class="text-sm text-gray-600"
+            >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
+          >
+          <div class="mt-2">
+            <span class="text-sm font-semibold text-purple-600">Your score: {playerScore}</span>
           </div>
         </div>
 
@@ -546,21 +635,72 @@
                 <div class="text-left font-bold flex-1">
                   {String.fromCharCode(65 + i)}. {answer.text}
                 </div>
-                {#if isCorrectAnswer && wasSelected}
-                  <span class="text-2xl text-green-600">✅</span>
-                {:else if isCorrectAnswer && !wasSelected && isMultipleChoice}
-                  <span class="text-2xl text-orange-600">⚠️</span>
-                {:else if wasSelected && !isCorrectAnswer}
+                {#if isCorrectAnswer}
+                  {#if wasSelected}
+                    <span class="text-2xl text-green-600">✅</span>
+                  {:else if isMultipleChoice}
+                    <span class="text-2xl text-orange-600">⚠️</span>
+                  {:else}
+                    <span class="text-2xl text-green-600">✅</span>
+                  {/if}
+                {:else if wasSelected}
                   <span class="text-2xl text-red-600">❌</span>
-                {:else if isCorrectAnswer}
-                  <span class="text-2xl">✅</span>
                 {/if}
               </div>
             </div>
           {/each}
         </div>
 
-        <div class="text-center mt-6 py-4">
+        <h2 class="text-2xl font-bold mb-6 text-center">Distribution: {question.question}</h2>
+
+        <Chart.Container config={{}} class="mt-16 mb-4 h-34 w-full">
+          <BarChart
+            bind:context
+            data={chartData}
+            x="letter"
+            y="count"
+            c="color"
+            tooltip={false}
+            labels={{ offset: 12 }}
+            yBaseline={0}
+            axis={true}
+            props={{
+              bars: {
+                stroke: "none",
+                rounded: "all",
+                radius: 4,
+                initialY: context?.height,
+                initialHeight: 0,
+                motion: {
+                  height: { type: "tween", duration: 500, easing: cubicInOut },
+                  y: { type: "tween", duration: 500, easing: cubicInOut },
+                },
+                fillOpacity: 0.9,
+              },
+              highlight: { area: { fill: "none" } },
+            }}
+          >
+            {#snippet marks({ getBarsProps, visibleSeries })}
+              {@const baseBarProps = getBarsProps(visibleSeries[0], 0)}
+              {#each chartData as data, i (i)}
+                {@const wasSelected = currentQuestionSelections.includes(i)}
+                {#if wasSelected}
+                  <Bar {...baseBarProps} fill={data.color} {data} motion="tween" />
+                {:else}
+                  <Bar
+                    {...baseBarProps}
+                    fill={data.color}
+                    fillOpacity={0.2}
+                    {data}
+                    motion="tween"
+                  />
+                {/if}
+              {/each}
+            {/snippet}
+          </BarChart>
+        </Chart.Container>
+
+        <div class="text-center py-8">
           <p class="text-gray-600">Waiting for host to continue...</p>
         </div>
       </div>
@@ -571,6 +711,13 @@
         <div class="text-center">
           <div class="text-5xl font-bold text-purple-600 mb-2">{playerScore}</div>
           <p class="text-gray-600">Your score</p>
+          {#if lastScoreGain !== null && prevScore !== null}
+            <div class="text-green-600 font-bold mt-2">
+              {prevScore} + {lastScoreGain} = {playerScore}
+            </div>
+          {:else if lastScoreGain !== null}
+            <div class="text-green-600 font-bold mt-2">+{lastScoreGain} points</div>
+          {/if}
           <p class="text-lg font-bold my-8 border border-gray-200 p-3 rounded">
             Rank: #{playerRank}
           </p>

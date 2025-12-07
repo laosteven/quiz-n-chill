@@ -386,7 +386,7 @@
           </div>
         {/if}
 
-        <div class="text-center py-8">
+        <div class="text-center mt-6">
           <button
             onclick={startAnswering}
             class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
@@ -448,10 +448,10 @@
           {/each}
         </div>
 
-        <div class="text-center">
+        <div class="text-center mt-6">
           <button
             onclick={() => socket.emit("host:reveal-answers", gameId)}
-            class="bg-orange-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-orange-700"
+            class="w-full bg-orange-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-orange-700"
           >
             Reveal answers
 
@@ -500,8 +500,51 @@
           {/each}
         </div>
 
-        <!-- Answer distribution chart -->
-        <Chart.Container config={{}} class="mt-12 mb-4 h-34 w-full">
+        <div class="text-center mt-6">
+          <button
+            onclick={() => socket.emit("host:show-distribution", gameId)}
+            class="w-full bg-indigo-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-indigo-700"
+          >
+            Show distribution
+          </button>
+        </div>
+      </div>
+    {/if}
+
+    <!-- Distribution Phase (host) -->
+    {#if game?.phase === "distribution"}
+      {@const question = game.config.questions[game.currentQuestionIndex]}
+      <div class="bg-white rounded-lg shadow-xl p-8 mb-8">
+        <div class="mb-4">
+          <span class="text-sm text-gray-600"
+            >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
+          >
+        </div>
+
+        <h2 class="text-xl font-bold my-6 text-center">Distribution: {question.question}</h2>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            <div
+              class="p-4 rounded-lg border-2 {answer.correct
+                ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
+                : `${color.bg} ${color.text} border-gray-300 opacity-30`}"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">{color.symbol}</span>
+                <div class="font-bold text-lg">
+                  {String.fromCharCode(65 + i)}. {answer.text}
+                </div>
+                {#if answer.correct}
+                  <span class="text-2xl ml-auto">✅</span>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+
+        <Chart.Container config={{}} class="mt-12 mb-4 h-80 w-full">
           <BarChart
             bind:context
             data={chartData}
@@ -547,12 +590,14 @@
           </BarChart>
         </Chart.Container>
 
-        <button
-          onclick={showScoreboard}
-          class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
-        >
-          Show scoreboard
-        </button>
+        <div class="text-center mt-6">
+          <button
+            onclick={showScoreboard}
+            class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
+          >
+            Show scoreboard
+          </button>
+        </div>
       </div>
     {/if}
 

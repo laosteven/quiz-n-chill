@@ -157,6 +157,13 @@ export function initSocketServer(httpServer: HTTPServer) {
       }
     });
 
+    socket.on("host:show-distribution", (gameId: string) => {
+      console.log(`host:show-distribution received from ${socket.id} for game ${gameId}`);
+      if (gameManager.showDistribution(gameId)) {
+        broadcastGameState(gameId);
+      }
+    });
+
     socket.on("host:start-answering", (gameId: string) => {
       if (gameManager.startAnswering(gameId)) {
         broadcastGameState(gameId);
