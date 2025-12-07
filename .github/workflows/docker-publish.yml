@@ -33,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/trivia-n-chill
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/quiz-n-chill
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=tag
@@ -59,8 +59,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/trivia-n-chill:${{ steps.resolve.outputs.tag }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/trivia-n-chill:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/quiz-n-chill:${{ steps.resolve.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/quiz-n-chill:latest
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Output image tags
