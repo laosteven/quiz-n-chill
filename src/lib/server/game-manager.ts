@@ -1,318 +1,329 @@
-import type { GameState, GameConfig, Player, LeaderboardEntry } from '$lib/types';
-import { nanoid } from 'nanoid';
-import { PlayerService } from './services/player.service';
+import type { GameState, GameConfig, Player, LeaderboardEntry } from "$lib/types";
+import { nanoid } from "nanoid";
+import { PlayerService } from "./services/player.service";
 
 // Use globalThis to ensure single instance across all module resolutions
-const GAME_MANAGER_KEY = Symbol.for('quiz-n-chill.gameManager');
+const GAME_MANAGER_KEY = Symbol.for("quiz-n-chill.gameManager");
 
 export class GameManager {
-	private games: Map<string, GameState> = new Map();
-	private playerServices: Map<string, PlayerService> = new Map(); // per-game player service
-	
-	constructor() {
-		// Enforce singleton pattern using globalThis
-		const globalAny = globalThis as any;
-		if (globalAny[GAME_MANAGER_KEY]) {
-			console.log('⚠️  Reusing existing GameManager instance');
-			return globalAny[GAME_MANAGER_KEY];
-		}
-		globalAny[GAME_MANAGER_KEY] = this;
-		console.log('✨ Created new GameManager instance');
-	}
+  private games: Map<string, GameState> = new Map();
+  private playerServices: Map<string, PlayerService> = new Map(); // per-game player service
 
-	createGame(config: GameConfig): string {
-		const gameId = nanoid(4);
-		const gameState: GameState = {
-			gameId,
-			config,
-			currentQuestionIndex: -1,
-			phase: 'lobby',
-			players: {}
-		};
-		this.games.set(gameId, gameState);
-		this.playerServices.set(gameId, new PlayerService());
-		return gameId;
-	}
+  constructor() {
+    // Enforce singleton pattern using globalThis
+    const globalAny = globalThis as any;
+    if (globalAny[GAME_MANAGER_KEY]) {
+      console.log("⚠️  Reusing existing GameManager instance");
+      return globalAny[GAME_MANAGER_KEY];
+    }
+    globalAny[GAME_MANAGER_KEY] = this;
+    console.log("✨ Created new GameManager instance");
+  }
 
-	getGame(gameId: string): GameState | undefined {
-		return this.games.get(gameId);
-	}
+  createGame(config: GameConfig): string {
+    const gameId = nanoid(4);
+    const gameState: GameState = {
+      gameId,
+      config,
+      currentQuestionIndex: -1,
+      phase: "lobby",
+      players: {},
+    };
+    this.games.set(gameId, gameState);
+    this.playerServices.set(gameId, new PlayerService());
+    return gameId;
+  }
 
-	getPlayerService(gameId: string): PlayerService | undefined {
-		return this.playerServices.get(gameId);
-	}
+  getGame(gameId: string): GameState | undefined {
+    return this.games.get(gameId);
+  }
 
-	/**
-	 * Find the gameId that contains a player with the given socket/player id
-	 */
-	findGameByPlayerId(playerId: string): string | undefined {
-		for (const [gameId, game] of this.games.entries()) {
-			if (game.players && game.players[playerId]) {
-				return gameId;
-			}
-		}
-		return undefined;
-	}
+  getPlayerService(gameId: string): PlayerService | undefined {
+    return this.playerServices.get(gameId);
+  }
 
-	addPlayer(gameId: string, playerId: string, playerName: string): { playerId: string; player: Player } | null {
-		const game = this.games.get(gameId);
-		const playerService = this.playerServices.get(gameId);
+  /**
+   * Find the gameId that contains a player with the given socket/player id
+   */
+  findGameByPlayerId(playerId: string): string | undefined {
+    for (const [gameId, game] of this.games.entries()) {
+      if (game.players && game.players[playerId]) {
+        return gameId;
+      }
+    }
+    return undefined;
+  }
 
-		if (!game || !playerService) {
-			console.log(`addPlayer failed: game or playerService not found for ${gameId}`);
-			return null;
-		}
+  addPlayer(
+    gameId: string,
+    playerId: string,
+    playerName: string
+  ): { playerId: string; player: Player } | null {
+    const game = this.games.get(gameId);
+    const playerService = this.playerServices.get(gameId);
 
-		const cleanName = playerName.trim();
-		
-		// Check if username is taken by a connected player
-		if (playerService.isUsernameTaken(cleanName)) {
-			return null;
-		}
+    if (!game || !playerService) {
+      console.log(`addPlayer failed: game or playerService not found for ${gameId}`);
+      return null;
+    }
 
-		// Check for disconnected player with same name and remove them
-		const disconnectedPlayer = playerService.findDisconnectedPlayer(cleanName);
-		if (disconnectedPlayer) {
-			console.log(`Removing disconnected player "${disconnectedPlayer.name}" to allow new connection`);
-			playerService.removePlayer(disconnectedPlayer.id); 
-			delete game.players[disconnectedPlayer.id];
-		}
+    const cleanName = playerName.trim();
 
-		// Add the new player with score restoration
-		const restoredScore = playerService.getStoredScore(cleanName);
-		const player = playerService.addPlayer(playerId, cleanName, restoredScore);
+    // Check if username is taken by a connected player
+    if (playerService.isUsernameTaken(cleanName)) {
+      return null;
+    }
 
-		game.players[playerId] = player;
-		
-		console.log(`Player joined: ${cleanName} (restored score: ${restoredScore})`);
-		
-		return { playerId, player };
-	}
+    // Check for disconnected player with same name and remove them
+    const disconnectedPlayer = playerService.findDisconnectedPlayer(cleanName);
+    if (disconnectedPlayer) {
+      console.log(
+        `Removing disconnected player "${disconnectedPlayer.name}" to allow new connection`
+      );
+      playerService.removePlayer(disconnectedPlayer.id);
+      delete game.players[disconnectedPlayer.id];
+    }
 
-	/**
-	 * Check if a player can join; returns ok and optional reason
-	 */
-	canJoin(gameId: string, playerName: string): { ok: boolean; reason?: string } {
-		const game = this.games.get(gameId);
-		const playerService = this.playerServices.get(gameId);
+    // Add the new player with score restoration
+    const restoredScore = playerService.getStoredScore(cleanName);
+    const player = playerService.addPlayer(playerId, cleanName, restoredScore);
 
-		if (!game) return { ok: false, reason: 'Game not found' };
-		if (!playerService) return { ok: false, reason: 'Internal server error' };
+    game.players[playerId] = player;
 
-		const cleanName = playerName.trim();
-		if (playerService.isUsernameTaken(cleanName)) return { ok: false, reason: 'Username already taken' };
+    console.log(`Player joined: ${cleanName} (restored score: ${restoredScore})`);
 
-		return { ok: true };
-	}
+    return { playerId, player };
+  }
 
-	startGame(gameId: string): boolean {
-		const game = this.games.get(gameId);
-		if (!game || game.phase !== 'lobby') {
-			return false;
-		}
+  /**
+   * Check if a player can join; returns ok and optional reason
+   */
+  canJoin(gameId: string, playerName: string): { ok: boolean; reason?: string } {
+    const game = this.games.get(gameId);
+    const playerService = this.playerServices.get(gameId);
 
-		game.phase = 'question-reading';
-		game.currentQuestionIndex = 0;
-		game.questionStartTime = Date.now();
-		return true;
-	}
+    if (!game) return { ok: false, reason: "Game not found" };
+    if (!playerService) return { ok: false, reason: "Internal server error" };
 
-	startAnswering(gameId: string): boolean {
-		const game = this.games.get(gameId);
-		if (!game || game.phase !== 'question-reading') {
-			return false;
-		}
+    const cleanName = playerName.trim();
+    if (playerService.isUsernameTaken(cleanName))
+      return { ok: false, reason: "Username already taken" };
 
-		game.phase = 'question-answering';
-		game.answerStartTime = Date.now();
-		return true;
-	}
+    return { ok: true };
+  }
 
-	submitAnswer(gameId: string, playerId: string, answerIndices: number[]): boolean {
-		const game = this.games.get(gameId);
-		if (!game || game.phase !== 'question-answering') {
-			return false;
-		}
+  startGame(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game || game.phase !== "lobby") {
+      return false;
+    }
 
-		const player = game.players[playerId];
-		if (!player) {
-			return false;
-		}
+    game.phase = "question-reading";
+    game.currentQuestionIndex = 0;
+    game.questionStartTime = Date.now();
+    return true;
+  }
 
-		player.answers[game.currentQuestionIndex] = answerIndices;
-		return true;
-	}
+  startAnswering(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game || game.phase !== "question-reading") {
+      return false;
+    }
 
-	getAnsweredCount(gameId: string): number {
-		const game = this.games.get(gameId);
-		if (!game || game.currentQuestionIndex < 0) {
-			return 0;
-		}
+    game.phase = "question-answering";
+    game.answerStartTime = Date.now();
+    return true;
+  }
 
-		return Object.values(game.players).filter(
-			player => player.answers[game.currentQuestionIndex] !== undefined
-		).length;
-	}
+  submitAnswer(gameId: string, playerId: string, answerIndices: number[]): boolean {
+    const game = this.games.get(gameId);
+    if (!game || game.phase !== "question-answering") {
+      return false;
+    }
 
-	renamePlayer(gameId: string, playerId: string, newName: string): { success: boolean; error?: string } {
-		const game = this.games.get(gameId);
-		const playerService = this.playerServices.get(gameId);
-		
-		if (!game || !playerService) {
-			return { success: false, error: 'Game not found' };
-		}
+    const player = game.players[playerId];
+    if (!player) {
+      return false;
+    }
 
-		const player = game.players[playerId];
-		if (!player) {
-			return { success: false, error: 'Player not found' };
-		}
+    player.answers[game.currentQuestionIndex] = answerIndices;
+    return true;
+  }
 
-		const cleanName = newName.trim();
-		
-		// Check if new username is taken by another active player
-		if (playerService.isUsernameTaken(cleanName, playerId)) {
-			return { success: false, error: 'Username already taken' };
-		}
+  getAnsweredCount(gameId: string): number {
+    const game = this.games.get(gameId);
+    if (!game || game.currentQuestionIndex < 0) {
+      return 0;
+    }
 
-		// Update in player service and game state
-		playerService.updatePlayerName(playerId, cleanName);
-		player.name = cleanName;
-		
-		return { success: true };
-	}
+    return Object.values(game.players).filter(
+      (player) => player.answers[game.currentQuestionIndex] !== undefined
+    ).length;
+  }
 
-	markPlayerDisconnected(gameId: string, playerId: string): boolean {
-		const game = this.games.get(gameId);
-		const playerService = this.playerServices.get(gameId);
-		
-		if (!game || !playerService) {
-			return false;
-		}
+  renamePlayer(
+    gameId: string,
+    playerId: string,
+    newName: string
+  ): { success: boolean; error?: string } {
+    const game = this.games.get(gameId);
+    const playerService = this.playerServices.get(gameId);
 
-		const player = game.players[playerId];
-		if (!player) {
-			return false;
-		}
+    if (!game || !playerService) {
+      return { success: false, error: "Game not found" };
+    }
 
-		playerService.markDisconnected(playerId);
-		if (game.players[playerId]) {
-			game.players[playerId].connected = false;
-		}
+    const player = game.players[playerId];
+    if (!player) {
+      return { success: false, error: "Player not found" };
+    }
 
-		console.log(`Player disconnected: ${player.name}`);
-		return true;
-	}
+    const cleanName = newName.trim();
 
-	clearDisconnectedPlayers(gameId: string): number {
-		const game = this.games.get(gameId);
-		const playerService = this.playerServices.get(gameId);
-		
-		if (!game || !playerService) {
-			return 0;
-		}
+    // Check if new username is taken by another active player
+    if (playerService.isUsernameTaken(cleanName, playerId)) {
+      return { success: false, error: "Username already taken" };
+    }
 
-		const disconnectedIds: string[] = [];
-		for (const [id, player] of Object.entries(game.players)) {
-			if (player.connected === false) {
-				disconnectedIds.push(id);
-			}
-		}
+    // Update in player service and game state
+    playerService.updatePlayerName(playerId, cleanName);
+    player.name = cleanName;
 
-		disconnectedIds.forEach(id => {
-			playerService.removePlayer(id);
-			delete game.players[id];
-		});
+    return { success: true };
+  }
 
-		return disconnectedIds.length;
-	}
+  markPlayerDisconnected(gameId: string, playerId: string): boolean {
+    const game = this.games.get(gameId);
+    const playerService = this.playerServices.get(gameId);
 
-	calculateScores(gameId: string): void {
-		const game = this.games.get(gameId);
-		if (!game) return;
+    if (!game || !playerService) {
+      return false;
+    }
 
-		const question = game.config.questions[game.currentQuestionIndex];
-		const correctIndices = question.answers
-			.map((a, i) => (a.correct ? i : -1))
-			.filter(i => i !== -1);
+    const player = game.players[playerId];
+    if (!player) {
+      return false;
+    }
 
-		Object.values(game.players).forEach(player => {
-			const playerAnswers = player.answers[game.currentQuestionIndex] || [];
-			
-			// Check if answer is correct
-			const isCorrect =
-				playerAnswers.length === correctIndices.length &&
-				playerAnswers.every(i => correctIndices.includes(i));
+    playerService.markDisconnected(playerId);
+    if (game.players[playerId]) {
+      game.players[playerId].connected = false;
+    }
 
-			if (isCorrect) {
-				let points = game.config.settings.pointsPerCorrectAnswer;
+    console.log(`Player disconnected: ${player.name}`);
+    return true;
+  }
 
-				// Time bonus
-				if (game.config.settings.timeBonus && game.answerStartTime) {
-					const timeElapsed = (Date.now() - game.answerStartTime) / 1000;
-					const timeRemaining = question.timeLimit - timeElapsed;
-					const timeBonus = Math.max(0, Math.floor((timeRemaining / question.timeLimit) * 500));
-					points += timeBonus;
-				}
+  clearDisconnectedPlayers(gameId: string): number {
+    const game = this.games.get(gameId);
+    const playerService = this.playerServices.get(gameId);
 
-				player.score += points;
-			}
-		});
-	}
+    if (!game || !playerService) {
+      return 0;
+    }
 
-	showScoreboard(gameId: string): boolean {
-		const game = this.games.get(gameId);
-		if (!game) return false;
+    const disconnectedIds: string[] = [];
+    for (const [id, player] of Object.entries(game.players)) {
+      if (player.connected === false) {
+        disconnectedIds.push(id);
+      }
+    }
 
-		game.phase = 'scoreboard';
-		return true;
-	}
+    disconnectedIds.forEach((id) => {
+      playerService.removePlayer(id);
+      delete game.players[id];
+    });
 
-	nextQuestion(gameId: string): boolean {
-		const game = this.games.get(gameId);
-		if (!game) return false;
+    return disconnectedIds.length;
+  }
 
-		game.currentQuestionIndex++;
-		
-		if (game.currentQuestionIndex >= game.config.questions.length) {
-			game.phase = 'leaderboard';
-			return true;
-		}
+  calculateScores(gameId: string): void {
+    const game = this.games.get(gameId);
+    if (!game) return;
 
-		game.phase = 'question-reading';
-		game.questionStartTime = Date.now();
-		game.answerStartTime = undefined;
-		return true;
-	}
+    const question = game.config.questions[game.currentQuestionIndex];
+    const correctIndices = question.answers
+      .map((a, i) => (a.correct ? i : -1))
+      .filter((i) => i !== -1);
 
-	getLeaderboard(gameId: string): LeaderboardEntry[] {
-		const game = this.games.get(gameId);
-		if (!game) return [];
+    Object.values(game.players).forEach((player) => {
+      const playerAnswers = player.answers[game.currentQuestionIndex] || [];
 
-		const entries = Object.values(game.players)
-			.map(player => ({
-				playerId: player.id,
-				playerName: player.name,
-				score: player.score
-			}))
-			.sort((a, b) => b.score - a.score);
+      // Check if answer is correct
+      const isCorrect =
+        playerAnswers.length === correctIndices.length &&
+        playerAnswers.every((i) => correctIndices.includes(i));
 
-		return entries.map((entry, index) => ({
-			...entry,
-			rank: index + 1
-		}));
-	}
+      if (isCorrect) {
+        let points = game.config.settings.pointsPerCorrectAnswer;
 
-	endGame(gameId: string): boolean {
-		const game = this.games.get(gameId);
-		if (!game) return false;
+        // Time bonus
+        if (game.config.settings.timeBonus && game.answerStartTime) {
+          const timeElapsed = (Date.now() - game.answerStartTime) / 1000;
+          const timeRemaining = question.timeLimit - timeElapsed;
+          const timeBonus = Math.max(0, Math.floor((timeRemaining / question.timeLimit) * 500));
+          points += timeBonus;
+        }
 
-		game.phase = 'finished';
-		return true;
-	}
+        player.score += points;
+      }
+    });
+  }
 
-	deleteGame(gameId: string): boolean {
-		return this.games.delete(gameId);
-	}
+  showScoreboard(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game) return false;
+
+    game.phase = "scoreboard";
+    return true;
+  }
+
+  nextQuestion(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game) return false;
+
+    game.currentQuestionIndex++;
+
+    if (game.currentQuestionIndex >= game.config.questions.length) {
+      game.phase = "leaderboard";
+      return true;
+    }
+
+    game.phase = "question-reading";
+    game.questionStartTime = Date.now();
+    game.answerStartTime = undefined;
+    return true;
+  }
+
+  getLeaderboard(gameId: string): LeaderboardEntry[] {
+    const game = this.games.get(gameId);
+    if (!game) return [];
+
+    const entries = Object.values(game.players)
+      .map((player) => ({
+        playerId: player.id,
+        playerName: player.name,
+        score: player.score,
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    return entries.map((entry, index) => ({
+      ...entry,
+      rank: index + 1,
+    }));
+  }
+
+  endGame(gameId: string): boolean {
+    const game = this.games.get(gameId);
+    if (!game) return false;
+
+    game.phase = "finished";
+    return true;
+  }
+
+  deleteGame(gameId: string): boolean {
+    return this.games.delete(gameId);
+  }
 }
 
 export const gameManager = new GameManager();

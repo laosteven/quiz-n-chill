@@ -1,7 +1,7 @@
 import "dotenv/config";
-import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
-import type { Server as HTTPServer } from 'http';
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
+import type { Server as HTTPServer } from "http";
 
 export default defineConfig(() => {
   return {

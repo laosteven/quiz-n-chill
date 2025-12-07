@@ -18,36 +18,44 @@ A self-hosted Kahoot-like quiz application built with SvelteKit and Socket.IO. C
 ### Using Docker (Recommended)
 
 #### Development Mode
+
 ```bash
 docker-compose -f docker-compose.dev.yml up
 ```
+
 Access at: http://localhost:5173
 
 #### Production Mode
+
 ```bash
 docker-compose up
 ```
+
 Access at: http://localhost:3000
 
 ### Local Development
 
 1. **Install dependencies**
+
 ```bash
 npm install
 ```
 
 2. **Configure environment (optional)**
+
 ```bash
 cp .env.example .env
 # Edit .env to set PORT, CORS_ORIGIN, etc.
 ```
 
 3. **Run development server**
+
 ```bash
 npm run dev
 ```
 
 4. **Build for production**
+
 ```bash
 npm run build
 npm run preview
@@ -65,17 +73,17 @@ description: "Optional description"
 
 settings:
   pointsPerCorrectAnswer: 1000
-  timeBonus: true  # Award bonus points for faster answers
+  timeBonus: true # Award bonus points for faster answers
   showLeaderboardAfterEachQuestion: true
 
 questions:
   - question: "Your question text?"
-    answerType: "single"  # or "multiple"
-    timeLimit: 20  # seconds to answer
-    readTime: 3    # seconds to read before showing answers
-    mediaType: "image"  # optional: "image" or "video"
-    mediaUrl: "https://i.imgur.com/example.jpg"  # optional
-    backgroundUrl: "https://i.imgur.com/bg.jpg"  # optional
+    answerType: "single" # or "multiple"
+    timeLimit: 20 # seconds to answer
+    readTime: 3 # seconds to read before showing answers
+    mediaType: "image" # optional: "image" or "video"
+    mediaUrl: "https://i.imgur.com/example.jpg" # optional
+    backgroundUrl: "https://i.imgur.com/bg.jpg" # optional
     answers:
       - text: "Answer 1"
         correct: false
