@@ -1,4 +1,5 @@
 <script lang="ts">
+  import "./layout.css";
   import favicon from "$lib/assets/favicon.svg";
   import "../app.css";
 
@@ -10,6 +11,5 @@
   <title>Quiz n' Chill</title>
   <meta name="description" content="Self-hosted quiz game" />
 </svelte:head>
-
 
 {@render children()}

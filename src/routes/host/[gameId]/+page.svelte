@@ -1,10 +1,12 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
+  import { Toaster } from "$lib/components/ui/sonner/index.js";
   import type { GameState, LeaderboardEntry } from "$lib/types";
   import QRCode from "qrcode";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
-  import { Toaster, toast } from "svelte-sonner";
+  import { toast } from "svelte-sonner";
 
   let socket: Socket;
   let game = $state<GameState | null>(null);
@@ -196,14 +198,16 @@
                 class="border-4 border-gray-200 rounded-lg mx-auto w-full"
               />
             {/if}
-            <p class="my-2 text-md text-center font-mono bg-gray-100 p-3 rounded break-all">{joinUrl}</p>
+            <p class="my-2 text-md text-center font-mono bg-gray-100 p-3 rounded break-all">
+              {joinUrl}
+            </p>
           </div>
 
           <div class="flex-1">
             <p class="font-semibold mb-2">Players ({playerCount}):</p>
-            <div class="space-y-2 max-h-[410px] overflow-y-auto">
+            <ScrollArea class="space-y-2 h-[410px]">
               {#each Object.values(game.players) as player}
-                <div class="bg-gray-100 p-3 rounded flex items-center justify-between">
+                <div class="bg-gray-100 p-3 rounded flex items-center justify-between mb-2">
                   <div class="flex items-center gap-3">
                     <span class="font-semibold">{player.name}</span>
                     {#if player.connected === false}
@@ -252,7 +256,7 @@
                   {/if}
                 </div>
               {/each}
-            </div>
+            </ScrollArea>
           </div>
         </div>
 

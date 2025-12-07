@@ -251,7 +251,6 @@
       <div class="bg-white rounded-lg shadow-xl p-8 mt-20 text-center">
         <h2 class="text-2xl font-bold mb-4">Welcome, {player?.name}!</h2>
         <p class="text-gray-600 mb-4">🎉 The game will start soon!</p>
-        <p class="text-sm text-gray-500 mb-6">Waiting for the host to begin...</p>
         <div class="animate-pulse text-8xl mb-6">⏳</div>
 
         {#if !editingName}
@@ -390,7 +389,7 @@
         <div class="text-center mb-6">
           <div class="text-5xl font-bold text-purple-600 mb-2">{playerScore}</div>
           <p class="text-gray-600">Your Score</p>
-          <p class="text-sm text-gray-500 mt-2">Rank: #{playerRank}</p>
+          <p class="text-lg font-bold my-4 border p-3 rounded">Rank: #{playerRank}</p>
         </div>
 
         <div class="text-center py-4">
