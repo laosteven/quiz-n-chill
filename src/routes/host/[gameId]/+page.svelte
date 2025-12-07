@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import { page } from "$app/stores";
-  import { io, type Socket } from "socket.io-client";
   import type { GameState, LeaderboardEntry } from "$lib/types";
   import QRCode from "qrcode";
+  import { io, type Socket } from "socket.io-client";
+  import { onDestroy, onMount } from "svelte";
   import { Toaster, toast } from "svelte-sonner";
 
   let socket: Socket;
@@ -179,7 +179,7 @@
 <div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
   <div class="max-w-6xl mx-auto">
     <h1 class="text-4xl font-bold text-white mb-8 text-center">
-      {game?.config.name || "Quiz Game"} - Host panel
+      {game?.config.name || "Quiz Game"}
     </h1>
 
     {#if game?.phase === "lobby"}
@@ -228,7 +228,6 @@
                           if (e.key === "Enter") savePlayerName(player.id);
                           if (e.key === "Escape") cancelEditing();
                         }}
-                        autofocus
                       />
                       <button
                         onclick={() => savePlayerName(player.id)}
@@ -326,7 +325,6 @@
 
         {#if game.phase === "question-reading"}
           <div class="text-center py-8">
-            <p class="text-xl text-gray-600 mb-4">Reading time... Answers will appear soon!</p>
             <button
               onclick={startAnswering}
               class="bg-blue-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-blue-700"
@@ -407,7 +405,7 @@
 
     {#if game?.phase === "leaderboard"}
       <div class="bg-white rounded-lg shadow-xl p-8">
-        <h2 class="text-3xl font-bold mb-8 text-center">Final leaderboard</h2>
+        <h2 class="text-3xl font-bold mb-8 text-center">Leaderboard</h2>
 
         <div class="space-y-3">
           {#each leaderboard as entry}

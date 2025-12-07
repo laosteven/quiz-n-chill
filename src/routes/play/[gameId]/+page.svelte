@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import { page } from "$app/stores";
-  import { io, type Socket } from "socket.io-client";
   import type { GameState, Player } from "$lib/types";
+  import { io, type Socket } from "socket.io-client";
+  import { onDestroy, onMount } from "svelte";
 
   let socket: Socket;
   let game = $state<GameState | null>(null);
@@ -339,9 +339,6 @@
               ? "Select all correct answers"
               : "Select one answer"}
           </p>
-          {#if question.timeLimit}
-            <p class="text-xs text-gray-500 mb-4 text-center">Time limit: {question.timeLimit}s</p>
-          {/if}
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {#each question.answers as answer, i}
