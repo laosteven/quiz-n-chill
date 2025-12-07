@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
+  import * as Chart from "$lib/components/ui/chart/index.js";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
   import TopProgress from "$lib/components/ui/top-progress.svelte";
@@ -9,9 +10,11 @@
   import type { GameState, LeaderboardEntry } from "$lib/types";
   import Check from "@lucide/svelte/icons/check";
   import X from "@lucide/svelte/icons/x";
+  import { Bar, BarChart, type ChartContextValue } from "layerchart";
   import { io, type Socket } from "socket.io-client";
   import { onDestroy, onMount } from "svelte";
   import { toast } from "svelte-sonner";
+  import { cubicInOut } from "svelte/easing";
 
   const qrCode = useQRCode();
   let socket: Socket;
@@ -26,6 +29,22 @@
   let readInterval: NodeJS.Timeout | undefined;
   let answerInterval: NodeJS.Timeout | undefined;
 
+  let chartData = $derived.by(() => {
+    const q = game?.config.questions?.[game.currentQuestionIndex];
+    if (!q) return [];
+    const maxAnswers = q.answers.length;
+    const entries = [];
+    for (let i = 0; i < maxAnswers; i++) {
+      const letter = String.fromCharCode(65 + i);
+      const count = answerCounts[i] || 0;
+      const color =
+        "var(--color-" + ANSWER_BUTTONS[i % ANSWER_BUTTONS.length].bg.replace("bg-", "") + ")";
+      const isCorrectAnswer = q.answers[i] && q.answers[i].correct;
+      entries.push({ letter, count, color, isCorrectAnswer });
+    }
+    return entries;
+  });
+
   // Calculate answer counts for current question in answer-review phase
   let answerCounts = $derived.by(() => {
     if (!game || game.currentQuestionIndex < 0) return {};
@@ -39,7 +58,8 @@
     });
     return counts;
   });
-  let maxCount = $derived(Math.max(...Object.values(answerCounts), 1));
+
+  let context = $state<ChartContextValue>();
 
   const gameId = $page.params.gameId;
 
@@ -69,6 +89,7 @@
               ...entry,
               rank: index + 1,
             }));
+
           console.log("Leaderboard populated:", leaderboard);
         } else {
           console.warn("No players found in game state");
@@ -452,7 +473,9 @@
           >
         </div>
 
-        <h2 class="text-3xl font-bold my-8 text-center border p-12 rounded-lg bg-white">
+        <h2
+          class="text-xl font-bold my-8 text-center border border-gray-300 p-6 rounded-lg bg-white"
+        >
           {question.question}
         </h2>
 
@@ -478,24 +501,51 @@
         </div>
 
         <!-- Answer distribution chart -->
-        <div class="mb-6 p-4 bg-gray-50 rounded">
-          <h3 class="text-lg font-bold mb-4 text-center">Answer Distribution</h3>
-          <div class="flex items-end gap-4 h-40 justify-center">
-            {#each question.answers as _, i}
-              {@const value = answerCounts[i] || 0}
-              <div class="flex-1 max-w-[80px] text-center">
-                <div
-                  class="mx-auto bg-purple-600 rounded-t"
-                  style="height: {Math.round(
-                    (value / maxCount) * 100
-                  )}%; width: 100%; min-height: 4px;"
-                ></div>
-                <div class="mt-2 text-sm font-bold">{String.fromCharCode(65 + i)}</div>
-                <div class="text-xs text-gray-600">{value} votes</div>
-              </div>
-            {/each}
-          </div>
-        </div>
+        <Chart.Container config={{}} class="mt-12 mb-4 h-34 w-full">
+          <BarChart
+            bind:context
+            data={chartData}
+            x="letter"
+            y="count"
+            c="color"
+            tooltip={false}
+            labels={{ offset: 12 }}
+            yBaseline={0}
+            axis={true}
+            props={{
+              bars: {
+                stroke: "none",
+                rounded: "all",
+                radius: 4,
+                initialY: context?.height,
+                initialHeight: 0,
+                motion: {
+                  height: { type: "tween", duration: 500, easing: cubicInOut },
+                  y: { type: "tween", duration: 500, easing: cubicInOut },
+                },
+                fillOpacity: 0.9,
+              },
+              highlight: { area: { fill: "none" } },
+            }}
+          >
+            {#snippet marks({ getBarsProps, visibleSeries })}
+              {@const baseBarProps = getBarsProps(visibleSeries[0], 0)}
+              {#each chartData as data, i (i)}
+                {#if data.isCorrectAnswer}
+                  <Bar {...baseBarProps} fill={data.color} {data} motion="tween" />
+                {:else}
+                  <Bar
+                    {...baseBarProps}
+                    fill={data.color}
+                    fillOpacity={0.2}
+                    {data}
+                    motion="tween"
+                  />
+                {/if}
+              {/each}
+            {/snippet}
+          </BarChart>
+        </Chart.Container>
 
         <button
           onclick={showScoreboard}

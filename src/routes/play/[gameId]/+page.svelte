@@ -493,7 +493,7 @@
       </div>
     {:else if game?.phase === "answer-review"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
-      <div class="bg-white rounded-lg shadow-xl p-8">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
