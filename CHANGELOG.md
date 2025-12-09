@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/laosteven/quiz-n-chill/compare/v1.1.0...v1.1.1) (2025-12-09)
+
+
+### Bug Fixes
+
+* README and improve answer button UI ([d610c5e](https://github.com/laosteven/quiz-n-chill/commit/d610c5e571acda7a4ac586eab1ae972497519ed9))
+
 # [1.1.0](https://github.com/laosteven/quiz-n-chill/compare/v1.0.2...v1.1.0) (2025-12-07)
 
 
