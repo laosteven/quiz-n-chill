@@ -521,7 +521,7 @@
           >
         </div>
 
-        <h2 class="text-xl font-bold my-6 text-center">Distribution: {question.question}</h2>
+        <h2 class="text-xl font-bold mb-8 text-center">{question.question}</h2>
 
         <div class="grid grid-cols-2 gap-4 mb-6">
           {#each question.answers as answer, i}

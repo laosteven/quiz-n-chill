@@ -508,25 +508,29 @@
             </p>
           {/if}
 
-          <div class="grid grid-cols-2 gap-4 mb-6">
+          <div class="grid grid-cols-2 gap-2 mb-6">
             {#each question.answers as answer, i}
               {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
               <button
                 onclick={() => toggleAnswer(i)}
-                class="p-6 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {selectedAnswers.includes(
+                class="aspect-square rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {selectedAnswers.includes(
                   i
                 )
                   ? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white`
                   : `${color.bg} ${color.text} opacity-80 hover:opacity-100`}"
               >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <span class="text-3xl">{color.symbol}</span>
-                    <span class="text-left">{answer.text}</span>
+                <div class="w-full h-full flex items-center justify-between">
+                  <div class="p-6 w-full h-full flex items-center gap-2 relative">
+                    <span class="absolute left-2 top-2 opacity-60">
+                      {color.symbol} {String.fromCharCode(65 + i)}
+                    </span>
+                    <span class="text-2xl text-center flex-1">
+                      {answer.text}
+                    </span>
+                    {#if selectedAnswers.includes(i)}
+                      <span class="absolute right-2 top-2">☑️</span>
+                    {/if}
                   </div>
-                  {#if selectedAnswers.includes(i)}
-                    <span class="text-2xl">✔️</span>
-                  {/if}
                 </div>
               </button>
             {/each}
@@ -566,7 +570,7 @@
         <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
 
         <!-- Correct answers highlighted -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-2">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             {@const wasSelected = currentQuestionSelections.includes(i)}
@@ -585,8 +589,8 @@
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
                     : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-3xl">{color.symbol}</span>
+              <div class="flex items-center gap-2">
+                <span>{color.symbol}</span>
                 <div class="text-left font-bold flex-1">
                   {String.fromCharCode(65 + i)}. {answer.text}
                 </div>
@@ -622,8 +626,10 @@
           </div>
         </div>
 
+        <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
+
         <!-- Correct answers highlighted -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-2">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             {@const wasSelected = currentQuestionSelections.includes(i)}
@@ -642,8 +648,8 @@
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
                     : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-3xl">{color.symbol}</span>
+              <div class="flex items-center gap-2">
+                <span>{color.symbol}</span>
                 <div class="text-left font-bold flex-1">
                   {String.fromCharCode(65 + i)}. {answer.text}
                 </div>
@@ -662,8 +668,6 @@
             </div>
           {/each}
         </div>
-
-        <h2 class="text-2xl font-bold mb-6 text-center">Distribution: {question.question}</h2>
 
         <Chart.Container config={{}} class="mt-16 mb-4 h-34 w-full">
           <BarChart
