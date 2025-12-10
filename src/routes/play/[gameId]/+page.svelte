@@ -524,7 +524,7 @@
                     <span class="absolute left-2 top-2 opacity-60">
                       {color.symbol} {String.fromCharCode(65 + i)}
                     </span>
-                    <span class="text-2xl text-center flex-1">
+                    <span class="text-xl text-center flex-1">
                       {answer.text}
                     </span>
                     {#if selectedAnswers.includes(i)}

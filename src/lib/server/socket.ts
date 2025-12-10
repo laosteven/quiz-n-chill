@@ -217,6 +217,19 @@ export function initSocketServer(httpServer: HTTPServer) {
           ) {
             setTimeout(() => {
               if (gameManager.revealAnswers(gameId)) {
+                // Emit correct answer indices to players (same as manual reveal)
+                const updatedGame = gameManager.getGame(gameId);
+                const q = updatedGame?.config.questions?.[updatedGame.currentQuestionIndex];
+                const correctIndices: number[] = [];
+                if (q && Array.isArray(q.answers)) {
+                  q.answers.forEach((a: any, idx: number) => {
+                    if (a && a.correct) correctIndices.push(idx);
+                  });
+                }
+                console.log(`auto-proceed: revealed answers for game ${gameId}:`, correctIndices);
+                io!.to(`game:${gameId}:players`).emit("answer:revealed", { answers: correctIndices });
+                io!.to(`game:${gameId}:host`).emit("answer:revealed", { answers: correctIndices });
+                
                 broadcastGameState(gameId);
                 console.log(`auto-proceed: moved to answer-review phase for game ${gameId}`);
               }
