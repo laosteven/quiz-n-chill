@@ -251,7 +251,7 @@
 
   <div class="max-w-6xl mx-auto">
     <h1 class="text-4xl font-bold text-white mb-8 text-center">
-      {game?.config.name || "Quiz Game"}
+      {game?.config.name || "Quiz game"}
     </h1>
 
     {#if game?.phase === "lobby"}
@@ -360,7 +360,7 @@
         </div>
 
         <h2
-          class="text-3xl font-bold my-8 relative text-center z-10 border border-gray-300 p-12 rounded-lg bg-gray-50"
+          class="text-2xl font-bold my-4 relative text-center z-10 border border-gray-300 p-4 rounded-lg bg-gray-50"
         >
           {question.question}
         </h2>
@@ -369,7 +369,7 @@
           <img
             src={question.mediaUrl}
             alt="Question media"
-            class="max-w-md mx-auto rounded-lg mb-6"
+            class="max-w-md mx-auto rounded-lg mb-6 max-h-[50vh]"
           />
         {/if}
 
@@ -419,7 +419,7 @@
         </div>
 
         <h2
-          class="text-3xl font-bold my-8 relative text-center z-10 border border-gray-300 p-12 rounded-lg bg-gray-50"
+          class="text-xl font-bold my-4 relative text-center z-10 border border-gray-300 p-4 rounded-lg bg-gray-50"
         >
           {question.question}
         </h2>
@@ -428,7 +428,7 @@
           <img
             src={question.mediaUrl}
             alt="Question media"
-            class="max-w-md mx-auto rounded-lg mb-6"
+            class="max-w-md mx-auto rounded-lg mb-6 max-h-[40vh]"
           />
         {/if}
 
@@ -436,11 +436,11 @@
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             <div
-              class="flex align-center justify-center p-4 rounded-lg h-[20vh] {color.bg} {color.text}"
+              class="flex justify-start p-4 rounded-lg h-[10vh] {color.bg} {color.text}"
             >
               <div class="flex items-center gap-3">
-                <span class="text-3xl">{color.symbol}</span>
-                <div class="font-bold text-3xl">
+                <span class="text-2xl">{color.symbol}</span>
+                <div class="font-bold text-2xl">
                   {String.fromCharCode(65 + i)}. {answer.text}
                 </div>
               </div>
@@ -487,8 +487,8 @@
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : `${color.bg} ${color.text} border-gray-300 opacity-30`}"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-3xl">{color.symbol}</span>
+              <div class="flex justify-start items-center gap-3">
+                <span class="text-2xl">{color.symbol}</span>
                 <div class="font-bold text-lg">
                   {String.fromCharCode(65 + i)}. {answer.text}
                 </div>
