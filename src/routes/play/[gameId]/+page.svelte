@@ -334,6 +334,8 @@
     playerSelections[qIndex] = selectedAnswers.slice();
     const localSelectionsKey = `selections:${gameId}:${player?.id || "temp"}`;
     localStorage.setItem(localSelectionsKey, JSON.stringify(playerSelections));
+
+    vibrate();
   }
 
   function submitAnswer() {

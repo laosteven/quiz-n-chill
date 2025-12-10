@@ -1,4 +1,4 @@
-name: "Technology Quiz"
+name: "Technology quiz"
 description: "Test your knowledge about technology and programming"
 
 settings:
@@ -9,10 +9,10 @@ settings:
   autoProceedWhenAllAnswered: false
 
 questions:
-  - question: "What does HTML stand for?"
-    answerType: "single"
+  - id: 1
     timeLimit: 20
     readTime: 3
+    question: "What does HTML stand for?"
     answers:
       - text: "Hyper Text Markup Language"
         correct: true
@@ -23,10 +23,10 @@ questions:
       - text: "Hyperlinks and Text Markup Language"
         correct: false
 
-  - question: "Which of these are programming paradigms?"
-    answerType: "multiple"
+  - id: 2
     timeLimit: 25
     readTime: 4
+    question: "Which of these are programming paradigms?"
     answers:
       - text: "Object-Oriented"
         correct: true
@@ -37,10 +37,10 @@ questions:
       - text: "Procedural"
         correct: true
 
-  - question: "What year was Python first released?"
-    answerType: "single"
+  - id: 3
     timeLimit: 20
     readTime: 3
+    question: "What year was Python first released?"
     answers:
       - text: "1989"
         correct: false
@@ -51,10 +51,10 @@ questions:
       - text: "2000"
         correct: false
 
-  - question: "What is the time complexity of binary search?"
-    answerType: "single"
+  - id: 4
     timeLimit: 25
     readTime: 4
+    question: "What is the time complexity of binary search?"
     answers:
       - text: "O(n)"
         correct: false
@@ -65,10 +65,10 @@ questions:
       - text: "O(1)"
         correct: false
 
-  - question: "Which companies are known as FAANG?"
-    answerType: "multiple"
+  - id: 5
     timeLimit: 30
     readTime: 5
+    question: "Which companies are known as FAANG?"
     answers:
       - text: "Facebook (Meta)"
         correct: true

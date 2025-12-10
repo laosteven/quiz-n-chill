@@ -1,4 +1,4 @@
-name: "General Knowledge Quiz"
+name: "General knowledge quiz"
 description: "A fun quiz about general knowledge topics"
 
 settings:
@@ -9,10 +9,10 @@ settings:
   autoProceedWhenAllAnswered: false
 
 questions:
-  - question: "What is the capital of France?"
-    answerType: "single"
+  - id: 1
     timeLimit: 20
     readTime: 3
+    question: "What is the capital of France?"
     answers:
       - text: "London"
         correct: false
@@ -23,10 +23,10 @@ questions:
       - text: "Madrid"
         correct: false
 
-  - question: "Which programming languages are statically typed?"
-    answerType: "multiple"
+  - id: 2
     timeLimit: 30
     readTime: 5
+    question: "Which programming languages are statically typed?"
     answers:
       - text: "JavaScript"
         correct: false
@@ -37,10 +37,10 @@ questions:
       - text: "Java"
         correct: true
 
-  - question: "What is this monument?"
-    answerType: "single"
+  - id: 3
     timeLimit: 15
     readTime: 2
+    question: "What is this monument?"
     mediaType: "image"
     mediaUrl: "https://i.imgur.com/example.jpg"
     answers:
@@ -53,11 +53,10 @@ questions:
       - text: "Colosseum"
         correct: false
 
-  - question: "Which ocean is the largest?"
-    answerType: "single"
+  - id: 4
     timeLimit: 20
     readTime: 3
-    # backgroundUrl: "https://i.imgur.com/ocean-bg.jpg"
+    question: "Which ocean is the largest?"
     answers:
       - text: "Atlantic Ocean"
         correct: false
