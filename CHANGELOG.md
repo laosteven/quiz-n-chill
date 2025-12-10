@@ -1,20 +1,23 @@
 ## [1.1.1](https://github.com/laosteven/quiz-n-chill/compare/v1.1.0...v1.1.1) (2025-12-09)
 
+
 ### Bug Fixes
 
-- README and improve answer button UI ([d610c5e](https://github.com/laosteven/quiz-n-chill/commit/d610c5e571acda7a4ac586eab1ae972497519ed9))
+* README and improve answer button UI ([d610c5e](https://github.com/laosteven/quiz-n-chill/commit/d610c5e571acda7a4ac586eab1ae972497519ed9))
 
 # [1.1.0](https://github.com/laosteven/quiz-n-chill/compare/v1.0.2...v1.1.0) (2025-12-07)
 
+
 ### Bug Fixes
 
-- Add distribution phase ([30eb732](https://github.com/laosteven/quiz-n-chill/commit/30eb7320dd2b1024f604d5c187ade50695208e3e))
-- display answer for player ([99dedf4](https://github.com/laosteven/quiz-n-chill/commit/99dedf4ca2252b37e9f7dd2a84eda05fc8a20937))
+* Add distribution phase ([30eb732](https://github.com/laosteven/quiz-n-chill/commit/30eb7320dd2b1024f604d5c187ade50695208e3e))
+* display answer for player ([99dedf4](https://github.com/laosteven/quiz-n-chill/commit/99dedf4ca2252b37e9f7dd2a84eda05fc8a20937))
+
 
 ### Features
 
-- Add QR code dialog, progress bar ([2e0fc10](https://github.com/laosteven/quiz-n-chill/commit/2e0fc100187c16de282b3bddd9454231abcb9c0b))
-- chart UI ([7a1ba96](https://github.com/laosteven/quiz-n-chill/commit/7a1ba963949e752a2e118e4104f3c2088f475d95))
+* Add QR code dialog, progress bar ([2e0fc10](https://github.com/laosteven/quiz-n-chill/commit/2e0fc100187c16de282b3bddd9454231abcb9c0b))
+* chart UI ([7a1ba96](https://github.com/laosteven/quiz-n-chill/commit/7a1ba963949e752a2e118e4104f3c2088f475d95))
 
 ## [1.0.2](https://github.com/laosteven/quiz-n-chill/compare/v1.0.1...v1.0.2) (2025-12-07)
 

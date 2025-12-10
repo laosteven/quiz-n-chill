@@ -10,53 +10,75 @@ settings:
 
 questions:
   - id: 1
-    type: single_choice
+    timeLimit: 20
+    readTime: 3
     question: "What does HTML stand for?"
-    options:
-      - "Hyper Text Markup Language"
-      - "High Tech Modern Language"
-      - "Home Tool Markup Language"
-      - "Hyperlinks and Text Markup Language"
-    answers: [0]
+    answers:
+      - text: "Hyper Text Markup Language"
+        correct: true
+      - text: "High Tech Modern Language"
+        correct: false
+      - text: "Home Tool Markup Language"
+        correct: false
+      - text: "Hyperlinks and Text Markup Language"
+        correct: false
 
   - id: 2
-    type: multiple_choice
+    timeLimit: 25
+    readTime: 4
     question: "Which of these are programming paradigms?"
-    options:
-      - "Object-Oriented"
-      - "Functional"
-      - "Sequential"
-      - "Procedural"
-    answers: [0, 1, 3]
+    answers:
+      - text: "Object-Oriented"
+        correct: true
+      - text: "Functional"
+        correct: true
+      - text: "Sequential"
+        correct: false
+      - text: "Procedural"
+        correct: true
 
   - id: 3
-    type: single_choice
+    timeLimit: 20
+    readTime: 3
     question: "What year was Python first released?"
-    options:
-      - "1989"
-      - "1991"
-      - "1995"
-      - "2000"
-    answers: [1]
+    answers:
+      - text: "1989"
+        correct: false
+      - text: "1991"
+        correct: true
+      - text: "1995"
+        correct: false
+      - text: "2000"
+        correct: false
 
   - id: 4
-    type: single_choice
+    timeLimit: 25
+    readTime: 4
     question: "What is the time complexity of binary search?"
-    options:
-      - "O(n)"
-      - "O(log n)"
-      - "O(n²)"
-      - "O(1)"
-    answers: [1]
+    answers:
+      - text: "O(n)"
+        correct: false
+      - text: "O(log n)"
+        correct: true
+      - text: "O(n²)"
+        correct: false
+      - text: "O(1)"
+        correct: false
 
   - id: 5
-    type: multiple_choice
+    timeLimit: 30
+    readTime: 5
     question: "Which companies are known as FAANG?"
-    options:
-      - "Facebook (Meta)"
-      - "Amazon"
-      - "Apple"
-      - "Netflix"
-      - "Google"
-      - "Microsoft"
-    answers: [0, 1, 2, 3, 4]
+    answers:
+      - text: "Facebook (Meta)"
+        correct: true
+      - text: "Amazon"
+        correct: true
+      - text: "Apple"
+        correct: true
+      - text: "Netflix"
+        correct: true
+      - text: "Google"
+        correct: true
+      - text: "Microsoft"
+        correct: false

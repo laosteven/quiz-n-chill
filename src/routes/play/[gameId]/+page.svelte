@@ -524,8 +524,7 @@
                 <div class="w-full h-full flex items-center justify-between">
                   <div class="p-6 w-full h-full flex items-center gap-2 relative">
                     <span class="absolute left-2 top-2 opacity-60">
-                      {color.symbol}
-                      {String.fromCharCode(65 + i)}
+                      {color.symbol} {String.fromCharCode(65 + i)}
                     </span>
                     <span class="text-2xl text-center flex-1">
                       {answer.text}
