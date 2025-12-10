@@ -1,21 +1,11 @@
-import { gameManager } from "$lib/server/game-manager";
-import type { GameConfig } from "$lib/types";
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
+import type { GameConfig } from "$lib/types";
+import { gameManager } from "$lib/server/game-manager";
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
     const config = (await request.json()) as GameConfig;
-
-    if (Array.isArray(config.questions)) {
-      config.questions = config.questions.map((q) => {
-        if (!q.answerType && Array.isArray(q.answers)) {
-          const correctCount = q.answers.filter((a) => !!a.correct).length;
-          q.answerType = correctCount > 1 ? "multiple" : "single";
-        }
-        return q;
-      });
-    }
 
     // Basic validation to avoid runtime 500s
     if (!config || !config.questions || !Array.isArray(config.questions) || !config.settings) {
