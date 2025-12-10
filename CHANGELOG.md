@@ -1,10 +1,3 @@
-# [1.2.0](https://github.com/laosteven/quiz-n-chill/compare/v1.1.1...v1.2.0) (2025-12-10)
-
-
-### Features
-
-* game format change ([0d32715](https://github.com/laosteven/quiz-n-chill/commit/0d327159233275f0671eafe7d12c44b4e502a8b5))
-
 ## [1.1.1](https://github.com/laosteven/quiz-n-chill/compare/v1.1.0...v1.1.1) (2025-12-09)
 
 ### Bug Fixes
