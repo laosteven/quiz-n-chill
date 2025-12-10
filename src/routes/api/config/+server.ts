@@ -17,12 +17,41 @@ export const GET: RequestHandler = async ({ url }) => {
 
       if (Array.isArray(config.questions)) {
         config.questions = (config.questions as unknown[]).map((qRaw) => {
-          const q = qRaw as Record<string, unknown>;
-          const answers = q.answers as unknown[] | undefined;
-          if (!q.answerType && Array.isArray(answers)) {
-            const correctCount = answers.filter((a) => !!((a as Record<string, unknown>)?.correct)).length;
+          const q = qRaw as Record<string, any>;
+
+          const opts = Array.isArray(q.options) ? q.options : undefined;
+          const ans = Array.isArray(q.answers) ? q.answers : undefined;
+
+          if (
+            Array.isArray(opts) &&
+            Array.isArray(ans) &&
+            ans.length &&
+            (typeof ans[0] === "number" || typeof ans[0] === "string")
+          ) {
+            const built = opts.map((o: any) => {
+              if (typeof o === "string") return { text: o, correct: false };
+              if (o && typeof o === "object" && "text" in o)
+                return { text: String(o.text), correct: false };
+              return { text: String(o ?? ""), correct: false };
+            });
+
+            // mark correct by index
+            for (const a of ans) {
+              const idx = typeof a === "string" ? parseInt(a, 10) : a;
+              if (!Number.isNaN(idx) && built[idx]) built[idx].correct = true;
+            }
+
+            q.answers = built;
+            delete q.options;
+          }
+
+          // Ensure answerType exists (infer from answers if missing)
+          const answersArr = Array.isArray(q.answers) ? q.answers : undefined;
+          if (!q.answerType && Array.isArray(answersArr)) {
+            const correctCount = answersArr.filter((a: any) => !!a?.correct).length;
             q.answerType = correctCount > 1 ? "multiple" : "single";
           }
+
           return q;
         });
       }

@@ -10,59 +10,45 @@ settings:
 
 questions:
   - id: 1
-    timeLimit: 20
-    readTime: 3
+    type: single_choice
     question: "What is the capital of France?"
-    answers:
-      - text: "London"
-        correct: false
-      - text: "Paris"
-        correct: true
-      - text: "Berlin"
-        correct: false
-      - text: "Madrid"
-        correct: false
+    options:
+      - "London"
+      - "Paris"
+      - "Berlin"
+      - "Madrid"
+    answers: [1]
 
   - id: 2
-    timeLimit: 30
-    readTime: 5
+    type: multiple_choice
     question: "Which programming languages are statically typed?"
-    answers:
-      - text: "JavaScript"
-        correct: false
-      - text: "TypeScript"
-        correct: true
-      - text: "Python"
-        correct: false
-      - text: "Java"
-        correct: true
+    options:
+      - "JavaScript"
+      - "TypeScript"
+      - "Python"
+      - "Java"
+    answers: [1, 3]
 
   - id: 3
+    type: single_choice
+    question: "What is this monument?"
     timeLimit: 15
     readTime: 2
-    question: "What is this monument?"
     mediaType: "image"
     mediaUrl: "https://i.imgur.com/example.jpg"
-    answers:
-      - text: "Eiffel Tower"
-        correct: true
-      - text: "Big Ben"
-        correct: false
-      - text: "Statue of Liberty"
-        correct: false
-      - text: "Colosseum"
-        correct: false
+    options:
+      - "Eiffel Tower"
+      - "Big Ben"
+      - "Statue of Liberty"
+      - "Colosseum"
+    answers: [0]
 
   - id: 4
-    timeLimit: 20
-    readTime: 3
+    type: single_choice
     question: "Which ocean is the largest?"
-    answers:
-      - text: "Atlantic Ocean"
-        correct: false
-      - text: "Indian Ocean"
-        correct: false
-      - text: "Pacific Ocean"
-        correct: true
-      - text: "Arctic Ocean"
-        correct: false
+    options:
+      - "Atlantic Ocean"
+      - "Indian Ocean"
+      - "Pacific Ocean"
+      - "Arctic Ocean"
+    answers: [2]
