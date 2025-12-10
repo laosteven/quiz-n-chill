@@ -1,3 +1,11 @@
+## [1.2.2](https://github.com/laosteven/quiz-n-chill/compare/v1.2.1...v1.2.2) (2025-12-10)
+
+
+### Bug Fixes
+
+* auto proceed ([25faa02](https://github.com/laosteven/quiz-n-chill/commit/25faa0290abc32301958a220fd9095ab518aceeb))
+* Q&A UI styles ([e25e0fa](https://github.com/laosteven/quiz-n-chill/commit/e25e0fa3b3da97653000814b736b6dd3dd399412))
+
 ## [1.2.1](https://github.com/laosteven/quiz-n-chill/compare/v1.2.0...v1.2.1) (2025-12-10)
 
 
