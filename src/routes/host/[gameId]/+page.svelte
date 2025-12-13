@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
+  import TakeScreenshot from "$lib/components/game/TakeScreenshot.svelte";
   import * as Chart from "$lib/components/ui/chart/index.js";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
@@ -9,6 +10,7 @@
   import { ANSWER_BUTTONS } from "$lib/constants";
   import type { GameState, LeaderboardEntry } from "$lib/types";
   import Check from "@lucide/svelte/icons/check";
+  import Info from "@lucide/svelte/icons/info";
   import X from "@lucide/svelte/icons/x";
   import { Bar, BarChart, type ChartContextValue } from "layerchart";
   import { io, type Socket } from "socket.io-client";
@@ -246,7 +248,7 @@
 
 <Toaster position="top-center" />
 
-<div class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
+<div id="host-node" class="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-8">
   <GameMenu />
 
   <div class="max-w-6xl mx-auto">
@@ -365,6 +367,14 @@
           {question.question}
         </h2>
 
+        {#if question.answerType === "multiple"}
+          <p
+            class="w-full flex items-center my-6 p-4 gap-2 justify-center bg-blue-300/30 text-sm text-center border rounded text-blue-700 font-medium"
+          >
+            <Info size={16} /> Multiple answers allowed.
+          </p>
+        {/if}
+
         {#if question.mediaType === "image" && question.mediaUrl}
           <img
             src={question.mediaUrl}
@@ -424,6 +434,14 @@
           {question.question}
         </h2>
 
+        {#if question.answerType === "multiple"}
+          <p
+            class="w-full flex items-center my-6 p-4 gap-2 justify-center bg-blue-300/30 text-sm text-center border rounded text-blue-700 font-medium"
+          >
+            <Info size={16} /> Multiple answers allowed.
+          </p>
+        {/if}
+
         {#if question.mediaType === "image" && question.mediaUrl}
           <img
             src={question.mediaUrl}
@@ -435,9 +453,7 @@
         <div class="grid grid-cols-2 gap-4 mb-6">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
-            <div
-              class="flex justify-start p-4 rounded-lg h-[10vh] {color.bg} {color.text}"
-            >
+            <div class="flex justify-start p-4 rounded-lg h-[10vh] {color.bg} {color.text}">
               <div class="flex items-center gap-3">
                 <span class="text-2xl">{color.symbol}</span>
                 <div class="font-bold text-2xl">
@@ -590,7 +606,8 @@
           </BarChart>
         </Chart.Container>
 
-        <div class="text-center mt-6">
+        <div class="text-center mt-6 flex flex-col gap-4">
+          <TakeScreenshot nodeId="host-node" playerName="host" />
           <button
             onclick={showScoreboard}
             class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"

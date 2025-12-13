@@ -1,10 +1,11 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
+  import TakeScreenshot from "$lib/components/game/TakeScreenshot.svelte";
   import * as Chart from "$lib/components/ui/chart/index.js";
   import TopProgress from "$lib/components/ui/top-progress.svelte";
   import { ANSWER_BUTTONS } from "$lib/constants";
-  import type { GameState, Player } from "$lib/types";
+  import type { GameState, Player, Question } from "$lib/types";
   import Info from "@lucide/svelte/icons/info";
   import { Bar, BarChart, type ChartContextValue } from "layerchart";
   import { io, type Socket } from "socket.io-client";
@@ -336,6 +337,16 @@
     localStorage.setItem(localSelectionsKey, JSON.stringify(playerSelections));
   }
 
+  function chooseSingleAnswer(index: number, question: Question) {
+    if (question.answerType === "single") {
+      toggleAnswer(index);
+      vibrate();
+      submitAnswer();
+    } else {
+      toggleAnswer(index);
+    }
+  }
+
   function submitAnswer() {
     if (selectedAnswers.length > 0) {
       // Immediately flip to submitted state so UI shows waiting message
@@ -375,12 +386,12 @@
   });
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-pink-500 to-purple-600 p-4">
+<div id="player-node" class="min-h-screen bg-gradient-to-br from-pink-500 to-purple-600 p-4">
   <GameMenu />
 
   <div class="max-w-2xl mx-auto">
     {#if !joined}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <h1 class="text-3xl font-bold mb-6 text-center">Join quiz</h1>
         <p class="text-gray-600 mb-4 text-center">
           Game code: <span class="font-mono font-bold text-purple-600">{gameId}</span>
@@ -408,7 +419,7 @@
         </div>
       </div>
     {:else if game?.phase === "lobby"}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20 text-center">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14 text-center">
         <h2 class="text-2xl font-bold mb-4">Welcome, {player?.name}!</h2>
         <p class="text-gray-600 mb-4">🎉 The game will start soon!</p>
         <div class="animate-pulse text-8xl mb-6">⏳</div>
@@ -454,7 +465,7 @@
         show={game?.config.settings.showCountdown && readTimeRemaining > 0}
         colorClass="bg-purple-600"
       />
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
@@ -487,7 +498,7 @@
         show={game?.config.settings.showCountdown && answerTimeRemaining > 0 && !hasSubmitted}
         colorClass="bg-green-400"
       />
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
@@ -499,43 +510,49 @@
 
         <h2 class="text-xl font-bold mb-4 text-center">{question.question}</h2>
 
-        {#if !hasSubmitted}
-          {#if question.answerType === "multiple"}
-            <p
-              class="flex items-center my-6 p-4 gap-2 justify-center bg-blue-300/30 text-sm text-center border rounded text-blue-700 font-medium"
+        {#if question.answerType === "multiple"}
+          <p
+            class="flex items-center my-6 p-4 gap-2 justify-center bg-blue-300/30 text-sm text-center border rounded text-blue-700 font-medium"
+          >
+            <Info size={16} /> Multiple answers allowed.
+          </p>
+        {/if}
+
+        <div class="grid grid-cols-2 gap-2 mb-6">
+          {#each question.answers as answer, i}
+            {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
+            <button
+              onclick={() => chooseSingleAnswer(i, question)}
+              class="aspect-square rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95
+              {question.answerType === 'single' && selectedAnswers.length === 0
+                ? `${color.bg} ${color.text} opacity-80 hover:opacity-100`
+                : ``}
+                              {selectedAnswers.includes(i) && question.answerType === 'multiple'
+                ? `${color.bg} ${color.text} opacity-50 hover:opacity-100`
+                : `${color.bg} ${color.text} opacity-100 hover:opacity-100`}
+              {selectedAnswers.includes(i) && question.answerType === 'single'
+                ? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white opacity-100`
+                : `${color.bg} ${color.text} opacity-40 hover:opacity-100`}"
             >
-              <Info size={16} /> Multiple answers allowed.
-            </p>
-          {/if}
-
-          <div class="grid grid-cols-2 gap-2 mb-6">
-            {#each question.answers as answer, i}
-              {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
-              <button
-                onclick={() => toggleAnswer(i)}
-                class="aspect-square rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95 {selectedAnswers.includes(
-                  i
-                )
-                  ? `${color.bg} ${color.text} ring-4 ring-offset-2 ring-offset-white`
-                  : `${color.bg} ${color.text} opacity-80 hover:opacity-100`}"
-              >
-                <div class="w-full h-full flex items-center justify-between">
-                  <div class="p-6 w-full h-full flex items-center gap-2 relative">
-                    <span class="absolute left-2 top-2 opacity-60">
-                      {color.symbol} {String.fromCharCode(65 + i)}
-                    </span>
-                    <span class="text-xl text-center flex-1">
-                      {answer.text}
-                    </span>
-                    {#if selectedAnswers.includes(i)}
-                      <span class="absolute right-2 top-2">☑️</span>
-                    {/if}
-                  </div>
+              <div class="w-full h-full flex items-center justify-between">
+                <div class="p-6 w-full h-full flex items-center gap-2 relative">
+                  <span class="absolute left-2 top-2 opacity-60">
+                    {color.symbol}
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="text-xl text-center flex-1">
+                    {answer.text}
+                  </span>
+                  {#if selectedAnswers.includes(i)}
+                    <span class="absolute right-2 top-2">☑️</span>
+                  {/if}
                 </div>
-              </button>
-            {/each}
-          </div>
+              </div>
+            </button>
+          {/each}
+        </div>
 
+        {#if question.answerType === "multiple" && !hasSubmitted}
           <button
             onclick={submitAnswer}
             disabled={selectedAnswers.length === 0}
@@ -547,17 +564,15 @@
               ({answerTimeRemaining}s)
             {/if}
           </button>
-        {:else}
-          <div class="text-center py-12">
-            <div class="text-6xl mb-4">✅</div>
-            <p class="text-xl font-bold text-green-600">Answer submitted!</p>
-            <p class="text-gray-600 mt-2">Waiting for other players...</p>
+        {:else if hasSubmitted}
+          <div class="text-center py-4">
+            <p class="text-gray-600">✅ Submitted!</p>
           </div>
         {/if}
       </div>
     {:else if game?.phase === "answer-review"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
@@ -581,13 +596,13 @@
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
             <div
-              class="p-4 rounded-lg border-2 {isCorrectAnswer
+              class="flex p-4 rounded-lg border-2 {isCorrectAnswer
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : wasSelected && !isCorrectAnswer
                   ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
                   : isMissedCorrect
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
-                    : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
+                    : `${color.bg} ${color.text} border-gray-300 opacity-20`}"
             >
               <div class="flex items-center gap-2">
                 <span>{color.symbol}</span>
@@ -616,13 +631,15 @@
       </div>
     {:else if game?.phase === "distribution"}
       {@const question = game.config.questions[game.currentQuestionIndex]}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <div class="mb-4 text-center">
           <span class="text-sm text-gray-600"
             >Question {game.currentQuestionIndex + 1} of {game.config.questions.length}</span
           >
           <div class="mt-2">
-            <span class="text-sm font-semibold text-purple-600">Your score: {playerScore}</span>
+            <span class="text-sm font-semibold text-purple-600"
+              >{playerName} • {playerScore}pts</span
+            >
           </div>
         </div>
 
@@ -640,13 +657,13 @@
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
             <div
-              class="p-4 rounded-lg border-2 {isCorrectAnswer
+              class="flex p-4 rounded-lg border-2 {isCorrectAnswer
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : wasSelected && !isCorrectAnswer
                   ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
                   : isMissedCorrect
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
-                    : `${color.bg} ${color.text} border-gray-300 opacity-60`}"
+                    : `${color.bg} ${color.text} border-gray-300 opacity-20`}"
             >
               <div class="flex items-center gap-2">
                 <span>{color.symbol}</span>
@@ -719,12 +736,13 @@
           </BarChart>
         </Chart.Container>
 
-        <div class="text-center py-8">
+        <div class="flex justify-center py-4 gap-4 items-center flex-col align-center">
+          <TakeScreenshot nodeId="player-node" {playerName} />
           <p class="text-gray-600">Waiting for host to continue...</p>
         </div>
       </div>
     {:else if game?.phase === "scoreboard"}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <h2 class="text-2xl font-bold mb-6 text-center">Results</h2>
 
         <div class="text-center">
@@ -747,7 +765,7 @@
         </div>
       </div>
     {:else if game?.phase === "leaderboard"}
-      <div class="bg-white rounded-lg shadow-xl p-8 mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 mt-14">
         <h2 class="text-2xl font-bold mb-6 text-center">Final results</h2>
 
         <div class="text-center mb-6">
@@ -772,7 +790,7 @@
         </div>
       </div>
     {:else if game?.phase === "finished"}
-      <div class="bg-white rounded-lg shadow-xl p-8 text-center mt-20">
+      <div class="bg-white rounded-lg shadow-xl p-8 text-center mt-14">
         <h2 class="text-2xl font-bold mb-4">Game over!</h2>
         <p class="text-gray-600">Thanks for playing!</p>
       </div>

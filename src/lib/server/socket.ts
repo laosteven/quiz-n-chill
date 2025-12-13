@@ -227,9 +227,11 @@ export function initSocketServer(httpServer: HTTPServer) {
                   });
                 }
                 console.log(`auto-proceed: revealed answers for game ${gameId}:`, correctIndices);
-                io!.to(`game:${gameId}:players`).emit("answer:revealed", { answers: correctIndices });
+                io!
+                  .to(`game:${gameId}:players`)
+                  .emit("answer:revealed", { answers: correctIndices });
                 io!.to(`game:${gameId}:host`).emit("answer:revealed", { answers: correctIndices });
-                
+
                 broadcastGameState(gameId);
                 console.log(`auto-proceed: moved to answer-review phase for game ${gameId}`);
               }
