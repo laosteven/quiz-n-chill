@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/laosteven/quiz-n-chill/compare/v1.2.2...v1.3.0) (2025-12-13)
+
+
+### Features
+
+* screenshot ([2766585](https://github.com/laosteven/quiz-n-chill/commit/27665855c5ad2a608cfea225c50d1a2cb3529091))
+
 ## [1.2.2](https://github.com/laosteven/quiz-n-chill/compare/v1.2.1...v1.2.2) (2025-12-10)
 
 ### Bug Fixes
