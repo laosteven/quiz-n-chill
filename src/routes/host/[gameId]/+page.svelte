@@ -450,16 +450,19 @@
           />
         {/if}
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-2 mb-6">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
-            <div class="flex justify-start p-4 rounded-lg h-[10vh] {color.bg} {color.text}">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">{color.symbol}</span>
-                <div class="font-bold text-2xl">
-                  {String.fromCharCode(65 + i)}. {answer.text}
-                </div>
-              </div>
+            <div
+              class="flex relative justify-start items-center rounded-lg {color.bg} {color.text}"
+            >
+              <span class="absolute left-2 top-2 opacity-60">
+                {color.symbol}
+                {String.fromCharCode(65 + i)}
+              </span>
+              <span class="md:text-2xl py-8 md:py-6 px-4 text-center font-semibold flex-1">
+                {answer.text}
+              </span>
             </div>
           {/each}
         </div>
@@ -495,22 +498,24 @@
           {question.question}
         </h2>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-2 mb-6">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             <div
-              class="p-4 rounded-lg border-2 {answer.correct
+              class="rounded-lg border-2 {answer.correct
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : `${color.bg} ${color.text} border-gray-300 opacity-30`}"
             >
-              <div class="flex justify-start items-center gap-3">
-                <span class="text-2xl">{color.symbol}</span>
-                <div class="font-bold text-lg">
-                  {String.fromCharCode(65 + i)}. {answer.text}
+              <div class="w-full h-full flex items-center justify-between">
+                <div class="w-full h-full flex items-center gap-2 relative">
+                  <span class="absolute left-2 top-2 opacity-60">
+                    {color.symbol}
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="md:text-2xl py-8 md:py-6 px-4 text-center font-semibold flex-1">
+                    {answer.text}
+                  </span>
                 </div>
-                {#if answer.correct}
-                  <span class="text-2xl ml-auto">✅</span>
-                {/if}
               </div>
             </div>
           {/each}
@@ -539,22 +544,24 @@
 
         <h2 class="text-xl font-bold mb-8 text-center">{question.question}</h2>
 
-        <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-2 mb-6">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
             <div
-              class="p-4 rounded-lg border-2 {answer.correct
+              class="rounded-lg border-2 {answer.correct
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : `${color.bg} ${color.text} border-gray-300 opacity-30`}"
             >
-              <div class="flex items-center gap-3">
-                <span class="text-3xl">{color.symbol}</span>
-                <div class="font-bold text-lg">
-                  {String.fromCharCode(65 + i)}. {answer.text}
+              <div class="w-full h-full flex items-center justify-between">
+                <div class="w-full h-full flex items-center gap-2 relative">
+                  <span class="absolute left-2 top-2 opacity-60">
+                    {color.symbol}
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="md:text-2xl py-8 md:py-6 px-4 text-center font-semibold flex-1">
+                    {answer.text}
+                  </span>
                 </div>
-                {#if answer.correct}
-                  <span class="text-2xl ml-auto">✅</span>
-                {/if}
               </div>
             </div>
           {/each}

@@ -21,7 +21,7 @@ export class GameManager {
   }
 
   createGame(config: GameConfig): string {
-    const gameId = nanoid(4);
+    const gameId = nanoid(4).toLocaleLowerCase();
     const gameState: GameState = {
       gameId,
       config,

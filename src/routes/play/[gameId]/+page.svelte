@@ -596,30 +596,24 @@
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
             <div
-              class="flex p-4 rounded-lg border-2 {isCorrectAnswer
+              class="flex rounded-lg border-2 {isCorrectAnswer
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : wasSelected && !isCorrectAnswer
                   ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
                   : isMissedCorrect
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
-                    : `${color.bg} ${color.text} border-gray-300 opacity-20`}"
+                    : `${color.bg} ${color.text} border-gray-300 opacity-40`}"
             >
-              <div class="flex items-center gap-2">
-                <span>{color.symbol}</span>
-                <div class="text-left font-bold flex-1">
-                  {String.fromCharCode(65 + i)}. {answer.text}
+              <div class="w-full h-full flex items-center justify-between">
+                <div class="py-10 px-4 w-full h-full flex items-center gap-2 relative">
+                  <span class="absolute left-2 top-2 opacity-60">
+                    {color.symbol}
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="text-xl text-center flex-1">
+                    {answer.text}
+                  </span>
                 </div>
-                {#if isCorrectAnswer}
-                  {#if wasSelected}
-                    <span class="text-2xl text-green-600">✅</span>
-                  {:else if isMultipleChoice}
-                    <span class="text-2xl text-orange-600">⚠️</span>
-                  {:else}
-                    <span class="text-2xl text-green-600">✅</span>
-                  {/if}
-                {:else if wasSelected}
-                  <span class="text-2xl text-red-600">❌</span>
-                {/if}
               </div>
             </div>
           {/each}
@@ -657,30 +651,24 @@
             {@const isMissedCorrect = isCorrectAnswer && !wasSelected && isMultipleChoice}
 
             <div
-              class="flex p-4 rounded-lg border-2 {isCorrectAnswer
+              class="flex rounded-lg border-2 {isCorrectAnswer
                 ? `${color.bg} ${color.text} border-green-500 ring-4 ring-green-200`
                 : wasSelected && !isCorrectAnswer
                   ? `${color.bg} ${color.text} border-red-500 ring-4 ring-red-200`
                   : isMissedCorrect
                     ? `${color.bg} ${color.text} border-orange-500 ring-4 ring-orange-200`
-                    : `${color.bg} ${color.text} border-gray-300 opacity-20`}"
+                    : `${color.bg} ${color.text} border-gray-300 opacity-40`}"
             >
-              <div class="flex items-center gap-2">
-                <span>{color.symbol}</span>
-                <div class="text-left font-bold flex-1">
-                  {String.fromCharCode(65 + i)}. {answer.text}
+              <div class="w-full h-full flex items-center justify-between">
+                <div class="py-10 px-4 w-full h-full flex items-center gap-2 relative">
+                  <span class="absolute left-2 top-2 opacity-60">
+                    {color.symbol}
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span class="text-xl text-center flex-1">
+                    {answer.text}
+                  </span>
                 </div>
-                {#if isCorrectAnswer}
-                  {#if wasSelected}
-                    <span class="text-2xl text-green-600">✅</span>
-                  {:else if isMultipleChoice}
-                    <span class="text-2xl text-orange-600">⚠️</span>
-                  {:else}
-                    <span class="text-2xl text-green-600">✅</span>
-                  {/if}
-                {:else if wasSelected}
-                  <span class="text-2xl text-red-600">❌</span>
-                {/if}
               </div>
             </div>
           {/each}
