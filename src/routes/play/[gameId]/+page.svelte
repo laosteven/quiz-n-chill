@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
-  import TakeScreenshot from "$lib/components/game/TakeScreenshot.svelte";
   import * as Chart from "$lib/components/ui/chart/index.js";
   import TopProgress from "$lib/components/ui/top-progress.svelte";
   import { ANSWER_BUTTONS } from "$lib/constants";
@@ -730,7 +729,7 @@
                   <Bar
                     {...baseBarProps}
                     fill={data.color}
-                    fillOpacity={0.2}
+                    fillOpacity={0.5}
                     {data}
                     motion="tween"
                   />
@@ -741,7 +740,7 @@
         </Chart.Container>
 
         <div class="flex justify-center py-4 gap-4 items-center flex-col align-center">
-          <TakeScreenshot nodeId="player-node" {playerName} />
+          <!-- <TakeScreenshot nodeId="player-node" {playerName} /> -->
           <p class="text-gray-600">Waiting for host to continue...</p>
         </div>
       </div>

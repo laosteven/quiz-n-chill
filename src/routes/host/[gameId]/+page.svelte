@@ -1,7 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import GameMenu from "$lib/components/game/GameMenu.svelte";
-  import TakeScreenshot from "$lib/components/game/TakeScreenshot.svelte";
   import * as Chart from "$lib/components/ui/chart/index.js";
   import ScrollArea from "$lib/components/ui/scroll-area/scroll-area.svelte";
   import { Toaster } from "$lib/components/ui/sonner/index.js";
@@ -619,7 +618,7 @@
                   <Bar
                     {...baseBarProps}
                     fill={data.color}
-                    fillOpacity={0.2}
+                    fillOpacity={0.5}
                     {data}
                     motion="tween"
                   />
@@ -630,7 +629,7 @@
         </Chart.Container>
 
         <div class="text-center mt-6 flex flex-col gap-4">
-          <TakeScreenshot nodeId="host-node" playerName="host" />
+          <!-- <TakeScreenshot nodeId="host-node" playerName="host" /> -->
           <button
             onclick={showScoreboard}
             class="w-full bg-blue-600 text-white py-4 px-6 rounded-lg font-bold text-xl hover:bg-blue-700"
