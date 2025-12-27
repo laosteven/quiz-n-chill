@@ -13,6 +13,7 @@ export interface Question {
   readTime: number; // seconds to read question before showing answers
   mediaType?: "image" | "video";
   mediaUrl?: string; // Imgur or YouTube URL
+  mediaAnswer?: string; // Image URL to display in answer-review and distribution phases
   backgroundUrl?: string;
 }
 

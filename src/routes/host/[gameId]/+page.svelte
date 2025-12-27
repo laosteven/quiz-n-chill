@@ -498,6 +498,14 @@
           {question.question}
         </h2>
 
+        {#if question.mediaAnswer}
+          <img
+            src={question.mediaAnswer}
+            alt="Answer media"
+            class="max-w-md mx-auto rounded-lg mb-6 max-h-[40vh]"
+          />
+        {/if}
+
         <div class="grid grid-cols-2 gap-2 mb-6">
           {#each question.answers as answer, i}
             {@const color = ANSWER_BUTTONS[i % ANSWER_BUTTONS.length]}
@@ -543,6 +551,14 @@
         </div>
 
         <h2 class="text-xl font-bold mb-8 text-center">{question.question}</h2>
+
+        {#if question.mediaAnswer}
+          <img
+            src={question.mediaAnswer}
+            alt="Answer media"
+            class="max-w-md mx-auto rounded-lg mb-6 max-h-[40vh]"
+          />
+        {/if}
 
         <div class="grid grid-cols-2 gap-2 mb-6">
           {#each question.answers as answer, i}

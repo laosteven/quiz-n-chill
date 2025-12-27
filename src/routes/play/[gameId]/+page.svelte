@@ -584,6 +584,14 @@
 
         <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
 
+        {#if question.mediaAnswer}
+          <img
+            src={question.mediaAnswer}
+            alt="Answer media"
+            class="mx-auto rounded-lg mb-6 max-h-[40vh]"
+          />
+        {/if}
+
         <!-- Correct answers highlighted -->
         <div class="grid grid-cols-2 gap-2">
           {#each question.answers as answer, i}
@@ -638,6 +646,14 @@
         </div>
 
         <h2 class="text-2xl font-bold mb-6 text-center">{question.question}</h2>
+
+        {#if question.mediaAnswer}
+          <img
+            src={question.mediaAnswer}
+            alt="Answer media"
+            class="mx-auto rounded-lg mb-6 max-h-[40vh]"
+          />
+        {/if}
 
         <!-- Correct answers highlighted -->
         <div class="grid grid-cols-2 gap-2">
