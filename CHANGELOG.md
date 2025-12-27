@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/laosteven/quiz-n-chill/compare/v1.3.1...v1.4.0) (2025-12-27)
+
+
+### Features
+
+* add mediaAnswer support ([71fc05e](https://github.com/laosteven/quiz-n-chill/commit/71fc05e0b5043ae67f3e95bde338a1fc807076f7))
+
 ## [1.3.1](https://github.com/laosteven/quiz-n-chill/compare/v1.3.0...v1.3.1) (2025-12-25)
 
 
