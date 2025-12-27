@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/laosteven/quiz-n-chill/compare/v1.4.0...v1.5.0) (2025-12-27)
+
+
+### Features
+
+* bar opacity and remove screenshot feature ([1984884](https://github.com/laosteven/quiz-n-chill/commit/19848846e429908f19397432c2847db5be0ca5b4))
+
 # [1.4.0](https://github.com/laosteven/quiz-n-chill/compare/v1.3.1...v1.4.0) (2025-12-27)
 
 
